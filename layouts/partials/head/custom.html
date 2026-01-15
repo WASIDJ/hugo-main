@@ -1,0 +1,17 @@
+<style>
+    /* Overwrite CSS variable */
+    :root {
+        --article-font-family: "Fira Code", "Ma Shan Zheng", var(--base-font-family);
+    }
+</style>
+
+<script>
+    (function () {
+        const customFont = document.createElement('link');
+        customFont.href = "https://fonts.googleapis.com/css2?family=Fira+Code:wght@600&family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400&display=swap";
+        customFont.type = "text/css";
+        customFont.rel = "stylesheet";
+    
+        document.head.appendChild(customFont);
+    }());
+</script>

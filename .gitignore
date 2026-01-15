@@ -1,0 +1,11 @@
+# 临时文件
+*.log
+.DS_Store
+Thumbs.db
+# Hugo 构建输出（不需要提交）
+public/
+# 编辑器配置
+.idea/
+.vscode/
+*.swp
+*~

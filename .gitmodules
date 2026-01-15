@@ -1,0 +1,6 @@
+[submodule "themes/hugo-theme-stack"]
+	path = themes/hugo-theme-stack
+	url = https://gitee.com/duchenpaul/hugo-theme-stack.git
+[submodule "content"]
+	path = content
+	url = https://github.com/WASIDJ/blog-content.git
