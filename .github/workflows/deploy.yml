@@ -6,6 +6,9 @@ on:
   push:
     branches: ["main"]
 
+  # 新增：当有其他仓库用 repository_dispatch 调用时也部署
+  repository_dispatch:
+    types: [blog-content-updated]
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -36,7 +39,15 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-          
+
+      # 仅当由其他仓库通过 repository_dispatch 触发时，才自动把所有子模块更新到远程最新提交
+      - name: Update all submodules to latest
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          git submodule update --init --recursive --remote
+          echo "Submodule status after update:"
+          git submodule status
+
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v3.0.0
         with:
