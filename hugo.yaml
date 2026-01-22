@@ -2,3 +2,7 @@ baseURL: https://wasidj.github.io/
 languageCode: zh-cn
 title: Ryou's Blog
 theme: hugo-theme-stack
+
+# Pagination configuration
+pagination:
+    pagerSize: 5
