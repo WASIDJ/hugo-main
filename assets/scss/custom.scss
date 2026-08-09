@@ -1,0 +1,42 @@
+/* Site-specific theme extensions. */
+
+.menu-social--qr {
+    position: relative;
+
+    .wechat-qr {
+        position: absolute;
+        z-index: 20;
+        left: 50%;
+        bottom: calc(100% + 12px);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 180px;
+        padding: 10px;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: var(--shadow-l2);
+        color: #1f2937;
+        font-size: 1.2rem;
+        text-align: center;
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, 6px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+
+        img {
+            display: block;
+            width: 160px;
+            height: 160px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+    }
+
+    &:hover .wechat-qr,
+    &:focus-within .wechat-qr {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translate(-50%, 0);
+    }
+}

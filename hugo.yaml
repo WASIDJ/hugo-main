@@ -7,3 +7,38 @@ canonifyURLs: false
 # Pagination configuration
 pagination:
     pagerSize: 5
+
+params:
+    sidebar:
+        avatar: img/avatar_cat.png
+
+menu:
+    social:
+        - identifier: github
+          name: GitHub
+          url: https://github.com/WASIDJ
+          params:
+              icon: brand-github
+              newTab: true
+
+        - identifier: bilibili
+          name: Bilibili
+          url: https://space.bilibili.com/354814866
+          params:
+              icon: brand-bilibili
+              newTab: true
+
+        - identifier: email
+          name: Email
+          url: mailto:qaqnoname@163.com
+          params:
+              icon: mail
+              newTab: true
+
+        - identifier: wechat
+          name: WeChat
+          url: /images/wechat-qr.svg
+          params:
+              icon: brand-wechat
+              newTab: true
+              qr: true
