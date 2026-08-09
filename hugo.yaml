@@ -8,6 +8,13 @@ canonifyURLs: false
 pagination:
     pagerSize: 5
 
+markup:
+    highlight:
+        noClasses: false
+        codeFences: true
+        guessSyntax: true
+        lineNos: false
+
 params:
     sidebar:
         avatar: img/avatar_cat.png

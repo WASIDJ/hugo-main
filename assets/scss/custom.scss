@@ -164,6 +164,41 @@
     opacity: 0.65;
 }
 
+/* Chroma code blocks: use Stack's light/dark palettes with a quiet frame. */
+.article-content {
+    .highlight {
+        padding-top: calc(var(--card-padding) + 1.5rem);
+        overflow: hidden;
+        border: 1px solid var(--card-separator-color);
+        border-radius: var(--card-border-radius);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+        code[data-lang]::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 0.75rem;
+            left: var(--card-padding);
+            color: var(--card-text-color-tertiary);
+            font-family: var(--code-font-family);
+            font-size: 1.1rem;
+            font-weight: 500;
+            line-height: 1;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+    }
+
+    .highlight pre,
+    pre {
+        font-size: 1.5rem;
+        line-height: 1.65;
+        font-variant-ligatures: contextual;
+        font-feature-settings: "calt" 1, "liga" 1;
+        tab-size: 4;
+    }
+}
+
 /* Focused article layout: keep the article and its ToC, collapse site navigation. */
 .article-page {
     .left-sidebar {
