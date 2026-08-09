@@ -10,47 +10,65 @@ function setupArticleStats(): () => void {
     const endpoint = document.querySelector<HTMLMetaElement>(
         'meta[name="article-stats-endpoint"]'
     )?.content;
-    const views = document.querySelector<HTMLElement>('[data-article-stat="views"]');
-    const completions = document.querySelector<HTMLElement>('[data-article-stat="completions"]');
-    if (!endpoint || !views || !completions) return () => undefined;
+    const blocks = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-article-stats][data-article-path]')
+    ).flatMap((element) => {
+        const path = element.dataset.articlePath;
+        const views = element.querySelector<HTMLElement>('[data-article-stat="views"]');
+        const completions = element.querySelector<HTMLElement>('[data-article-stat="completions"]');
+        return path && views && completions ? [{ element, path, views, completions }] : [];
+    });
+    if (!endpoint || blocks.length === 0) return () => undefined;
 
-    const articlePath = window.location.pathname.endsWith('/')
+    const currentPath = window.location.pathname.endsWith('/')
         ? window.location.pathname
         : `${window.location.pathname}/`;
+    const articleBlock = document.querySelector('.main-article')
+        ? blocks.find((block) => block.path === currentPath)
+        : undefined;
     const localPreview = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-    const viewSessionKey = `article-view:${articlePath}`;
-    const completeSessionKey = `article-complete:${articlePath}`;
 
-    const render = (stats: ArticleStatsResponse): void => {
-        views.textContent = String(stats.views);
-        completions.textContent = String(stats.completions);
+    const render = (path: string, stats: ArticleStatsResponse): void => {
+        blocks.filter((block) => block.path === path).forEach((block) => {
+            block.views.textContent = String(stats.views);
+            block.completions.textContent = String(stats.completions);
+        });
     };
 
-    const request = async (event?: 'view' | 'complete'): Promise<boolean> => {
+    const request = async (path: string, event?: 'view' | 'complete'): Promise<boolean> => {
         try {
             const response = await fetch(
-                event ? endpoint : `${endpoint}?path=${encodeURIComponent(articlePath)}`,
+                event ? endpoint : `${endpoint}?path=${encodeURIComponent(path)}`,
                 event
                     ? {
                         method: 'POST',
                         credentials: 'include',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ path: articlePath, event })
+                        body: JSON.stringify({ path, event })
                     }
                     : { credentials: 'include' }
             );
             if (!response.ok) return false;
-            render(await response.json() as ArticleStatsResponse);
+            render(path, await response.json() as ArticleStatsResponse);
             return true;
         } catch {
             return false;
         }
     };
 
+    if (!articleBlock) {
+        const uniquePaths = [...new Set(blocks.map((block) => block.path))];
+        uniquePaths.forEach((path) => void request(path));
+        return () => undefined;
+    }
+
+    const viewSessionKey = `article-view:${articleBlock.path}`;
+    const completeSessionKey = `article-complete:${articleBlock.path}`;
+
     if (localPreview || sessionStorage.getItem(viewSessionKey) === '1') {
-        void request();
+        void request(articleBlock.path);
     } else {
-        void request('view').then((recorded) => {
+        void request(articleBlock.path, 'view').then((recorded) => {
             if (recorded) sessionStorage.setItem(viewSessionKey, '1');
         });
     }
@@ -64,7 +82,7 @@ function setupArticleStats(): () => void {
         ) return;
 
         completionPending = true;
-        void request('complete').then((recorded) => {
+        void request(articleBlock.path, 'complete').then((recorded) => {
             completionPending = false;
             if (recorded) sessionStorage.setItem(completeSessionKey, '1');
         });

@@ -16,6 +16,6 @@
     }());
 </script>
 
-{{ if and .IsPage (eq .Type "post") .Site.Params.article.viewCount }}
+{{ if .Site.Params.article.viewCount }}
 <meta name="article-stats-endpoint" content="{{ .Site.Params.article.statsEndpoint }}">
 {{ end }}

@@ -30,7 +30,7 @@
 
     {{ $showReadingTime := $Page.Params.readingTime | default ($Page.Site.Params.article.readingTime) }}
     {{ $showDate := not $Page.Date.IsZero }}
-    {{ $showViewCount := and (not $IsList) (eq $Page.Type "post") $Page.Site.Params.article.viewCount }}
+    {{ $showViewCount := and (eq $Page.Type "post") $Page.Site.Params.article.viewCount }}
     {{ $showTime := or $showDate $showReadingTime $showViewCount }}
     {{ $showTranslations := $Page.IsTranslated }}
     {{ $showTags := and $Page.Site.Params.Article.List.ShowTags ($Page.GetTerms "tags") $IsList }}
@@ -54,9 +54,16 @@
                 {{ end }}
 
                 {{ if $showViewCount }}
-                    <span class="article-view-count" title="同一浏览器每天只计数一次">
-                        浏览 <span data-article-stat="views">—</span> 次
-                        · 读完 <span data-article-stat="completions">—</span> 次
+                    <span class="article-view-count" data-article-stats data-article-path="{{ $Page.RelPermalink }}" title="同一浏览器每天只计数一次">
+                        <span class="article-stat-item">
+                            {{ partial "helper/icon" "eye" }}
+                            浏览 <span data-article-stat="views">0</span> 次
+                        </span>
+                        <span class="article-stat-separator" aria-hidden="true">·</span>
+                        <span class="article-stat-item">
+                            {{ partial "helper/icon" "circle-check" }}
+                            读完 <span data-article-stat="completions">0</span> 次
+                        </span>
                     </span>
                 {{ end }}
             </div>
