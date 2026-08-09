@@ -18,6 +18,72 @@
     white-space: nowrap;
 }
 
+/* Keep the desktop ToC compact and reveal only the active branch. */
+.widget--toc #TableOfContents {
+    li > ul,
+    li > ol {
+        display: none;
+
+        &.toc-branch-open {
+            display: block;
+        }
+    }
+}
+
+.back-to-top {
+    position: fixed;
+    z-index: 900;
+    right: calc(2rem + env(safe-area-inset-right));
+    bottom: calc(2rem + env(safe-area-inset-bottom));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.4rem;
+    height: 4.4rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--card-background);
+    box-shadow: var(--shadow-l2);
+    color: var(--card-text-color-main);
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(1rem);
+    transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
+
+    &.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
+
+    &:hover {
+        color: var(--accent-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--accent-color);
+        outline-offset: 3px;
+    }
+
+    svg {
+        width: 2.2rem;
+        height: 2.2rem;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .back-to-top {
+        transition: none;
+    }
+}
+
 .menu-social--qr {
     position: relative;
 
