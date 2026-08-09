@@ -1,5 +1,30 @@
 /* Site-specific theme extensions. */
 
+/* Readable code palette: GitHub Light by default, One Dark in dark mode. */
+:root {
+    --code-block-background: #f6f8fa;
+    --code-block-foreground: #24292f;
+    --code-block-muted: #6e7781;
+    --code-block-keyword: #cf222e;
+    --code-block-function: #8250df;
+    --code-block-name: #0550ae;
+    --code-block-string: #0a3069;
+    --code-block-number: #953800;
+    --code-block-operator: #116329;
+}
+
+[data-scheme="dark"] {
+    --code-block-background: #1b1f27;
+    --code-block-foreground: #d7dae0;
+    --code-block-muted: #8b929e;
+    --code-block-keyword: #c678dd;
+    --code-block-function: #61afef;
+    --code-block-name: #e5c07b;
+    --code-block-string: #98c379;
+    --code-block-number: #d19a66;
+    --code-block-operator: #56b6c2;
+}
+
 .article-reading-progress {
     position: fixed;
     z-index: 1000;
@@ -169,8 +194,9 @@
     .highlight {
         padding-top: calc(var(--card-padding) + 1.5rem);
         overflow: hidden;
-        border: 1px solid var(--card-separator-color);
+        border: 1px solid color-mix(in srgb, var(--code-block-muted) 28%, transparent);
         border-radius: var(--card-border-radius);
+        background: var(--code-block-background);
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 
         code[data-lang]::before {
@@ -178,7 +204,7 @@
             position: absolute;
             top: 0.75rem;
             left: var(--card-padding);
-            color: var(--card-text-color-tertiary);
+            color: var(--code-block-muted);
             font-family: var(--code-font-family);
             font-size: 1.1rem;
             font-weight: 500;
@@ -191,11 +217,52 @@
 
     .highlight pre,
     pre {
-        font-size: 1.5rem;
+        color: var(--code-block-foreground);
+        font-size: 1.6rem;
+        font-weight: 500;
         line-height: 1.65;
         font-variant-ligatures: contextual;
         font-feature-settings: "calt" 1, "liga" 1;
         tab-size: 4;
+    }
+
+    .chroma {
+        color: var(--code-block-foreground);
+        background: transparent;
+
+        .k, .kc, .kd, .kn, .kp, .kr, .kt {
+            color: var(--code-block-keyword);
+            font-weight: 600;
+        }
+
+        .nf, .fm, .nb, .bp {
+            color: var(--code-block-function);
+        }
+
+        .na, .nc, .nd, .ne, .nl, .nn, .nx, .py {
+            color: var(--code-block-name);
+        }
+
+        .s, .sa, .sb, .sc, .dl, .sd, .s1, .s2, .se, .sh, .si, .sr, .ss, .sx {
+            color: var(--code-block-string);
+        }
+
+        .m, .mb, .mf, .mh, .mi, .il, .mo {
+            color: var(--code-block-number);
+        }
+
+        .o, .ow {
+            color: var(--code-block-operator);
+        }
+
+        .c, .ch, .cm, .c1, .cs, .cp, .cpf, .gu {
+            color: var(--code-block-muted);
+            font-style: italic;
+        }
+
+        .nt {
+            color: var(--code-block-keyword);
+        }
     }
 }
 
@@ -229,12 +296,13 @@
     }
 
     .main-container {
-        max-width: 1280px;
+        max-width: 140rem;
+        --right-sidebar-max-width: 29rem;
         justify-content: center;
     }
 
     main.main {
-        max-width: 92rem;
+        max-width: 98rem;
         margin-left: 0;
     }
 }
