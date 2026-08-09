@@ -1,6 +1,76 @@
 const SEARCH_FOCUS_KEY = 'stack-focus-search';
 const SEARCH_PATH = '/page/search/';
 
+interface ArticleStatsResponse {
+    views: number;
+    completions: number;
+}
+
+function setupArticleStats(): () => void {
+    const endpoint = document.querySelector<HTMLMetaElement>(
+        'meta[name="article-stats-endpoint"]'
+    )?.content;
+    const views = document.querySelector<HTMLElement>('[data-article-stat="views"]');
+    const completions = document.querySelector<HTMLElement>('[data-article-stat="completions"]');
+    if (!endpoint || !views || !completions) return () => undefined;
+
+    const articlePath = window.location.pathname.endsWith('/')
+        ? window.location.pathname
+        : `${window.location.pathname}/`;
+    const localPreview = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    const viewSessionKey = `article-view:${articlePath}`;
+    const completeSessionKey = `article-complete:${articlePath}`;
+
+    const render = (stats: ArticleStatsResponse): void => {
+        views.textContent = String(stats.views);
+        completions.textContent = String(stats.completions);
+    };
+
+    const request = async (event?: 'view' | 'complete'): Promise<boolean> => {
+        try {
+            const response = await fetch(
+                event ? endpoint : `${endpoint}?path=${encodeURIComponent(articlePath)}`,
+                event
+                    ? {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: articlePath, event })
+                    }
+                    : { credentials: 'include' }
+            );
+            if (!response.ok) return false;
+            render(await response.json() as ArticleStatsResponse);
+            return true;
+        } catch {
+            return false;
+        }
+    };
+
+    if (localPreview || sessionStorage.getItem(viewSessionKey) === '1') {
+        void request();
+    } else {
+        void request('view').then((recorded) => {
+            if (recorded) sessionStorage.setItem(viewSessionKey, '1');
+        });
+    }
+
+    let completionPending = false;
+    return (): void => {
+        if (
+            localPreview ||
+            completionPending ||
+            sessionStorage.getItem(completeSessionKey) === '1'
+        ) return;
+
+        completionPending = true;
+        void request('complete').then((recorded) => {
+            completionPending = false;
+            if (recorded) sessionStorage.setItem(completeSessionKey, '1');
+        });
+    };
+}
+
 function focusSearchInput(): void {
     const input = document.querySelector<HTMLInputElement>('.search-form input');
     if (input) {
@@ -30,7 +100,7 @@ function setupGlobalSearchShortcut(): void {
     }
 }
 
-function setupReadingProgress(): void {
+function setupReadingProgress(onReadingComplete: () => void): void {
     const article = document.querySelector<HTMLElement>('.main-article');
     const content = article?.querySelector<HTMLElement>('.article-content');
     if (!article || !content) return;
@@ -143,6 +213,7 @@ function setupReadingProgress(): void {
     const showReadingCelebration = (): void => {
         if (celebrationShown) return;
         celebrationShown = true;
+        onReadingComplete();
 
         const celebration = document.createElement('aside');
         celebration.className = 'article-reading-celebration';
@@ -448,7 +519,7 @@ function setupArticleFocusMode(): void {
 window.addEventListener('load', () => {
     setupGlobalSearchShortcut();
     setupTocAutoCollapse();
-    setupReadingProgress();
+    setupReadingProgress(setupArticleStats());
     setupBackToTop();
     setupArticleFocusMode();
 });

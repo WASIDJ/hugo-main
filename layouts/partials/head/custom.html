@@ -17,5 +17,5 @@
 </script>
 
 {{ if and .IsPage (eq .Type "post") .Site.Params.article.viewCount }}
-<script src="https://cdn.busuanzi.cc/busuanzi/3.6.9/busuanzi.min.js" defer></script>
+<meta name="article-stats-endpoint" content="{{ .Site.Params.article.statsEndpoint }}">
 {{ end }}

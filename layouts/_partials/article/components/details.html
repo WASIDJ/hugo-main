@@ -54,8 +54,9 @@
                 {{ end }}
 
                 {{ if $showViewCount }}
-                    <span class="article-view-count">
-                        阅读 <span id="busuanzi_page_pv">加载中...</span> 次
+                    <span class="article-view-count" title="同一浏览器每天只计数一次">
+                        浏览 <span data-article-stat="views">—</span> 次
+                        · 读完 <span data-article-stat="completions">—</span> 次
                     </span>
                 {{ end }}
             </div>

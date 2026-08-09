@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ryou-blog-article-stats",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "www.jeffkafka.top/api/article-stats*",
+      "zone_name": "jeffkafka.top"
+    },
+    {
+      "pattern": "jeffkafka.top/api/article-stats*",
+      "zone_name": "jeffkafka.top"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ryou-blog-stats",
+      "database_id": "f2651e5c-3c00-4233-978f-6237ef60921f",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

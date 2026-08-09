@@ -4,6 +4,9 @@
 Thumbs.db
 # Hugo 构建输出（不需要提交）
 public/
+.wrangler/
+node_modules/
+*.tsbuildinfo
 # 编辑器配置
 .idea/
 .vscode/
