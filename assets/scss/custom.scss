@@ -9,6 +9,13 @@
     height: 10px;
     background: var(--card-separator-color);
     box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+
+    &.is-visible,
+    &:focus-within {
+        opacity: 1;
+    }
 }
 
 .article-reading-progress__chapter {
@@ -384,7 +391,8 @@
 @media (prefers-reduced-motion: reduce) {
     .article-reading-progress__fill,
     .article-reading-progress__marker,
-    .article-reading-progress__chapter {
+    .article-reading-progress__chapter,
+    .article-reading-progress {
         transition: none;
     }
 

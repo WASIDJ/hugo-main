@@ -111,6 +111,34 @@ function setupReadingProgress(): void {
     let start = 0;
     let end = 0;
     let celebrationShown = false;
+    let progressHideTimer = 0;
+    let progressPointerInside = false;
+
+    const showProgress = (): void => {
+        window.clearTimeout(progressHideTimer);
+        progressBar.classList.add('is-visible');
+    };
+
+    const scheduleProgressHide = (delay = 700): void => {
+        window.clearTimeout(progressHideTimer);
+        progressHideTimer = window.setTimeout(() => {
+            if (!progressPointerInside && !progressBar.contains(document.activeElement)) {
+                progressBar.classList.remove('is-visible');
+            }
+        }, delay);
+    };
+
+    progressBar.addEventListener('pointerenter', () => {
+        progressPointerInside = true;
+        showProgress();
+    });
+    progressBar.addEventListener('pointerleave', () => {
+        progressPointerInside = false;
+        scheduleProgressHide(300);
+    });
+    progressBar.addEventListener('pointerdown', showProgress);
+    progressBar.addEventListener('focusin', showProgress);
+    progressBar.addEventListener('focusout', () => scheduleProgressHide(300));
 
     const showReadingCelebration = (): void => {
         if (celebrationShown) return;
@@ -255,7 +283,11 @@ function setupReadingProgress(): void {
         });
     };
 
-    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('scroll', () => {
+        update();
+        showProgress();
+        scheduleProgressHide();
+    }, { passive: true });
     window.addEventListener('resize', measure);
     measure();
 
