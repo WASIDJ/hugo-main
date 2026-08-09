@@ -139,6 +139,54 @@
     white-space: nowrap;
 }
 
+/* Focused article layout: keep the article and its ToC, collapse site navigation. */
+.article-page {
+    .left-sidebar {
+        position: fixed;
+        z-index: 980;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        display: flex;
+        width: 30rem;
+        max-width: calc(100vw - 4rem);
+        height: 100vh;
+        max-height: none;
+        padding: var(--main-top-padding) 2.4rem;
+        overflow-y: auto;
+        background: var(--body-background);
+        box-shadow: var(--shadow-l2);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(calc(-100% - 2rem));
+        transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+    }
+
+    &.reading-sidebar-open .left-sidebar {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(0);
+    }
+
+    .main-container {
+        max-width: 1280px;
+        justify-content: center;
+    }
+
+    main.main {
+        max-width: 92rem;
+        margin-left: 0;
+    }
+}
+
+.reading-sidebar-hover-zone {
+    position: fixed;
+    z-index: 970;
+    inset: 0 auto 0 0;
+    width: 1.6rem;
+    height: 100vh;
+}
+
 .article-content :is(h2, h3, h4, h5, h6)[id] {
     scroll-margin-top: 6rem;
 }
@@ -345,6 +393,10 @@
     }
 
     .article-reading-celebration {
+        transition: none;
+    }
+
+    .article-page .left-sidebar {
         transition: none;
     }
 

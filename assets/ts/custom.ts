@@ -347,9 +347,76 @@ function setupBackToTop(): void {
     updateVisibility();
 }
 
+function setupArticleFocusMode(): void {
+    if (!document.body.classList.contains('article-page')) return;
+
+    const sidebar = document.querySelector<HTMLElement>('.left-sidebar');
+    if (!sidebar) return;
+
+    const hoverZone = document.createElement('div');
+    hoverZone.className = 'reading-sidebar-hover-zone';
+    hoverZone.setAttribute('aria-hidden', 'true');
+
+    let closeTimer = 0;
+
+    const cancelClose = (): void => {
+        window.clearTimeout(closeTimer);
+    };
+
+    const setSidebarOpen = (open: boolean): void => {
+        document.body.classList.toggle('reading-sidebar-open', open);
+        sidebar.inert = !open;
+        sidebar.setAttribute('aria-hidden', String(!open));
+    };
+
+    const scheduleClose = (): void => {
+        cancelClose();
+        closeTimer = window.setTimeout(() => setSidebarOpen(false), 180);
+    };
+
+    hoverZone.addEventListener('pointerenter', () => {
+        cancelClose();
+        setSidebarOpen(true);
+    });
+    hoverZone.addEventListener('pointerdown', () => setSidebarOpen(true));
+    sidebar.addEventListener('pointerenter', cancelClose);
+    sidebar.addEventListener('pointerleave', scheduleClose);
+    sidebar.addEventListener('focusin', () => {
+        cancelClose();
+        setSidebarOpen(true);
+    });
+    sidebar.addEventListener('focusout', (event) => {
+        if (!(event.relatedTarget instanceof Node) || !sidebar.contains(event.relatedTarget)) {
+            scheduleClose();
+        }
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+        const target = event.target;
+        if (
+            document.body.classList.contains('reading-sidebar-open') &&
+            target instanceof Node &&
+            !sidebar.contains(target) &&
+            !hoverZone.contains(target)
+        ) {
+            setSidebarOpen(false);
+        }
+    });
+
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && document.body.classList.contains('reading-sidebar-open')) {
+            setSidebarOpen(false);
+        }
+    });
+
+    document.body.appendChild(hoverZone);
+    setSidebarOpen(false);
+}
+
 window.addEventListener('load', () => {
     setupGlobalSearchShortcut();
     setupTocAutoCollapse();
     setupReadingProgress();
     setupBackToTop();
+    setupArticleFocusMode();
 });
