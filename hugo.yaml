@@ -12,6 +12,31 @@ params:
     sidebar:
         avatar: img/avatar_cat.png
 
+    article:
+        viewCount: true
+
+    widgets:
+        page:
+            - type: toc
+
+    comments:
+        enabled: true
+        provider: giscus
+        giscus:
+            repo: WASIDJ/wasidj.github.io
+            repoID: R_kgDOQ6dAPA
+            category: Announcements
+            categoryID: DIC_kwDOQ6dAPM4C1ERt
+            mapping: pathname
+            strict: 0
+            reactionsEnabled: 1
+            emitMetadata: 0
+            inputPosition: bottom
+            lightTheme: light
+            darkTheme: dark_dimmed
+            lang: zh-CN
+            loading: lazy
+
 menu:
     social:
         - identifier: github
@@ -42,3 +67,5 @@ menu:
               icon: brand-wechat
               newTab: true
               qr: true
+
+# Site-specific behavior is implemented through root-level overrides.

@@ -15,3 +15,7 @@
         document.head.appendChild(customFont);
     }());
 </script>
+
+{{ if and .IsPage (eq .Type "post") .Site.Params.article.viewCount }}
+<script src="https://cdn.busuanzi.cc/busuanzi/3.6.9/busuanzi.min.js" defer></script>
+{{ end }}
