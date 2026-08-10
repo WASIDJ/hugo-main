@@ -1,6 +1,41 @@
 const SEARCH_FOCUS_KEY = 'stack-focus-search';
 const SEARCH_PATH = '/page/search/';
 
+type RoughAnnotationType =
+    | 'underline'
+    | 'box'
+    | 'circle'
+    | 'highlight'
+    | 'strike-through'
+    | 'crossed-off'
+    | 'bracket';
+
+interface RoughAnnotationConfig {
+    type: RoughAnnotationType;
+    animate?: boolean;
+    animationDuration?: number;
+    color?: string;
+    strokeWidth?: number;
+    padding?: number | number[];
+    multiline?: boolean;
+    iterations?: number;
+    brackets?: string | string[];
+}
+
+interface RoughAnnotation {
+    show(): void;
+    hide(): void;
+    remove(): void;
+}
+
+interface RoughNotationAPI {
+    annotate(element: HTMLElement, config: RoughAnnotationConfig): RoughAnnotation;
+}
+
+interface Window {
+    RoughNotation?: RoughNotationAPI;
+}
+
 interface ArticleStatsResponse {
     views: number;
     completions: number;
@@ -468,6 +503,430 @@ function setupBackToTop(): void {
     updateVisibility();
 }
 
+interface ArticleSidenote {
+    reference: HTMLAnchorElement;
+    source: HTMLElement;
+    note: HTMLElement;
+    connector: SVGGElement;
+}
+
+function cloneFootnoteContent(source: HTMLElement): HTMLElement {
+    const clone = source.cloneNode(true) as HTMLElement;
+    clone.removeAttribute('id');
+    clone.querySelectorAll<HTMLElement>('[id]').forEach((element) => element.removeAttribute('id'));
+    clone.querySelectorAll<HTMLElement>('.footnote-backref').forEach((element) => element.remove());
+
+    const content = document.createElement('div');
+    content.className = 'article-sidenote__content';
+    while (clone.firstChild) content.appendChild(clone.firstChild);
+    return content;
+}
+
+function setupArticleSidenotes(): void {
+    if (!document.documentElement.classList.contains('article-focus-mode')) return;
+
+    const content = document.querySelector<HTMLElement>('.main-article .article-content');
+    const container = document.querySelector<HTMLElement>('.main-container');
+    const main = container?.querySelector<HTMLElement>('main.main');
+    if (!content || !container || !main) return;
+
+    const references = Array.from(
+        content.querySelectorAll<HTMLAnchorElement>('a.footnote-ref[href^="#"]')
+    );
+    if (references.length === 0) return;
+
+    const rail = document.createElement('aside');
+    rail.className = 'article-sidenotes';
+    rail.setAttribute('aria-label', '文章边注');
+    rail.innerHTML = '<div class="article-sidenotes__title" aria-hidden="true">NOTES</div>';
+
+    const connectorLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    connectorLayer.classList.add('article-sidenote-connectors');
+    connectorLayer.setAttribute('aria-hidden', 'true');
+
+    const notes = references.flatMap((reference, index): ArticleSidenote[] => {
+        const href = reference.getAttribute('href');
+        if (!href) return [];
+
+        let targetId = href.slice(1);
+        try {
+            targetId = decodeURIComponent(targetId);
+        } catch {
+            // Keep Goldmark's original ID when it is not URI encoded.
+        }
+
+        const source = document.getElementById(targetId);
+        if (!source) return [];
+
+        const number = reference.textContent?.trim() || String(index + 1);
+        const note = document.createElement('section');
+        note.className = 'article-sidenote';
+        note.id = `sidenote-${index + 1}`;
+        note.setAttribute('role', 'note');
+        note.innerHTML = `
+            <a class="article-sidenote__number" href="#${reference.parentElement?.id || ''}"
+               aria-label="返回正文脚注 ${number}">${number}</a>
+        `;
+        const noteContent = cloneFootnoteContent(source);
+        noteContent.id = `sidenote-content-${index + 1}`;
+        note.appendChild(noteContent);
+        rail.appendChild(note);
+
+        const connector = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        connector.classList.add('article-sidenote-connector');
+        connector.dataset.sidenote = String(index + 1);
+        connector.append(
+            document.createElementNS('http://www.w3.org/2000/svg', 'path'),
+            document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        );
+        connectorLayer.appendChild(connector);
+
+        reference.parentElement?.classList.add('has-article-sidenote');
+        reference.setAttribute('aria-describedby', noteContent.id);
+        return [{ reference, source, note, connector }];
+    });
+
+    if (notes.length === 0) return;
+
+    container.insertBefore(rail, main);
+    container.appendChild(connectorLayer);
+    document.documentElement.classList.add('article-sidenotes-enhanced');
+
+    const wideLayout = window.matchMedia('(min-width: 1440px)');
+    const popoverLayout = window.matchMedia('(max-width: 1439.98px)');
+    const hoverInteraction = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const popover = document.createElement('aside');
+    popover.className = 'article-footnote-popover';
+    popover.setAttribute('role', 'note');
+    popover.setAttribute('aria-label', '脚注预览');
+    popover.setAttribute('aria-live', 'polite');
+    popover.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(popover);
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const roughAnnotations = new Map<
+        HTMLAnchorElement,
+        { reference: RoughAnnotation; note: RoughAnnotation }
+    >();
+    if (window.RoughNotation) {
+        notes.forEach(({ reference, note }) => {
+            roughAnnotations.set(reference, {
+                reference: window.RoughNotation!.annotate(reference, {
+                    type: 'circle',
+                    animate: !reduceMotion,
+                    animationDuration: 360,
+                    color: 'var(--accent-color)',
+                    strokeWidth: 1.5,
+                    padding: 2,
+                    iterations: 2
+                }),
+                note: window.RoughNotation!.annotate(note, {
+                    type: 'bracket',
+                    brackets: 'right',
+                    animate: !reduceMotion,
+                    animationDuration: 420,
+                    color: 'var(--accent-color)',
+                    strokeWidth: 1.5,
+                    padding: 4,
+                    iterations: 2
+                })
+            });
+        });
+    }
+
+    let closeTimer = 0;
+    let layoutFrame = 0;
+
+    const clearCloseTimer = (): void => window.clearTimeout(closeTimer);
+
+    const setActive = (item: ArticleSidenote | null): void => {
+        notes.forEach(({ reference, note, connector }) => {
+            const active = item?.reference === reference;
+            reference.classList.toggle('is-sidenote-active', active);
+            note.classList.toggle('is-active', active);
+            connector.classList.toggle('is-active', active);
+
+            const annotations = roughAnnotations.get(reference);
+            if (!annotations) return;
+            annotations.reference.hide();
+            annotations.note.hide();
+            if (active) {
+                window.requestAnimationFrame(() => {
+                    annotations.reference.show();
+                    if (wideLayout.matches) annotations.note.show();
+                });
+            }
+        });
+    };
+
+    const hidePopover = (): void => {
+        clearCloseTimer();
+        popover.classList.remove('is-visible');
+        popover.setAttribute('aria-hidden', 'true');
+        if (!wideLayout.matches) setActive(null);
+    };
+
+    const schedulePopoverClose = (): void => {
+        clearCloseTimer();
+        closeTimer = window.setTimeout(hidePopover, 140);
+    };
+
+    const positionPopover = (reference: HTMLAnchorElement): void => {
+        const referenceRect = reference.getBoundingClientRect();
+        const popoverRect = popover.getBoundingClientRect();
+        const edgeGap = 12;
+        const centeredLeft = referenceRect.left + referenceRect.width / 2 - popoverRect.width / 2;
+        const left = Math.min(
+            Math.max(centeredLeft, edgeGap),
+            window.innerWidth - popoverRect.width - edgeGap
+        );
+        const above = referenceRect.top - popoverRect.height - 12;
+        const preferredTop = above >= edgeGap ? above : referenceRect.bottom + 12;
+        const top = Math.min(
+            Math.max(preferredTop, edgeGap),
+            window.innerHeight - popoverRect.height - edgeGap
+        );
+
+        popover.style.left = `${left}px`;
+        popover.style.top = `${top}px`;
+        popover.dataset.placement = above >= edgeGap ? 'top' : 'bottom';
+    };
+
+    const showPopover = (item: ArticleSidenote): void => {
+        if (!popoverLayout.matches) return;
+        clearCloseTimer();
+        setActive(item);
+        popover.replaceChildren(cloneFootnoteContent(item.source));
+        popover.setAttribute('aria-hidden', 'false');
+        popover.classList.add('is-visible');
+        positionPopover(item.reference);
+    };
+
+    const layoutSidenotes = (): void => {
+        window.cancelAnimationFrame(layoutFrame);
+        layoutFrame = window.requestAnimationFrame(() => {
+            if (!wideLayout.matches) return;
+
+            const railTop = rail.getBoundingClientRect().top + window.scrollY;
+            let nextTop = 4.6 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+            notes.forEach(({ reference, note }) => {
+                const referenceTop = reference.getBoundingClientRect().top + window.scrollY;
+                const desiredTop = referenceTop - railTop - 8;
+                const top = Math.max(desiredTop, nextTop);
+                note.style.top = `${top}px`;
+                nextTop = top + note.offsetHeight + 14;
+            });
+
+            const canvasRect = container.getBoundingClientRect();
+            connectorLayer.setAttribute('viewBox', `0 0 ${canvasRect.width} ${canvasRect.height}`);
+            connectorLayer.setAttribute('width', String(canvasRect.width));
+            connectorLayer.setAttribute('height', String(canvasRect.height));
+
+            notes.forEach(({ reference, note, connector }, index) => {
+                const referenceRect = reference.getBoundingClientRect();
+                const noteRect = note.getBoundingClientRect();
+                const referenceX = referenceRect.left + referenceRect.width / 2 - canvasRect.left;
+                const referenceY = referenceRect.top + referenceRect.height / 2 - canvasRect.top;
+                const noteX = noteRect.right - canvasRect.left;
+                const noteY = noteRect.top + Math.min(noteRect.height / 2, 24) - canvasRect.top;
+                const bendX = noteX + Math.max((referenceX - noteX) * 0.52, 32);
+                const paths = Array.from(connector.querySelectorAll<SVGPathElement>('path'));
+                const jitter = index % 2 === 0 ? 1.6 : -1.6;
+                const pathData = [
+                    `M ${referenceX} ${referenceY} C ${referenceX - 34} ${referenceY + jitter}, ${bendX} ${noteY - jitter}, ${noteX} ${noteY}`,
+                    `M ${referenceX + 1.5} ${referenceY + 2} C ${referenceX - 29} ${referenceY - jitter}, ${bendX + 3} ${noteY + jitter}, ${noteX} ${noteY + 2}`
+                ];
+
+                paths.forEach((path, pathIndex) => {
+                    path.setAttribute('d', pathData[pathIndex]);
+                    const length = Math.max(path.getTotalLength(), 1);
+                    path.style.setProperty('--connector-length', String(length));
+                });
+                if (referenceRect.bottom >= 0 && referenceRect.top <= window.innerHeight) {
+                    connector.classList.add('is-drawn');
+                }
+            });
+        });
+    };
+
+    if ('IntersectionObserver' in window) {
+        const connectorObserver = new IntersectionObserver((entries) => {
+            if (!wideLayout.matches) return;
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                notes.find(({ reference }) => reference === entry.target)
+                    ?.connector.classList.add('is-drawn');
+            });
+        }, { rootMargin: '-8% 0px -8% 0px', threshold: 0.1 });
+        notes.forEach(({ reference }) => connectorObserver.observe(reference));
+    } else {
+        notes.forEach(({ connector }) => connector.classList.add('is-drawn'));
+    }
+
+    notes.forEach((item) => {
+        item.reference.addEventListener('pointerenter', () => {
+            if (!hoverInteraction.matches) return;
+            if (wideLayout.matches) setActive(item);
+            else showPopover(item);
+        });
+        item.reference.addEventListener('pointerleave', () => {
+            if (!hoverInteraction.matches) return;
+            if (wideLayout.matches) setActive(null);
+            else schedulePopoverClose();
+        });
+        item.reference.addEventListener('focus', () => {
+            if (wideLayout.matches) setActive(item);
+            else showPopover(item);
+        });
+        item.reference.addEventListener('blur', () => {
+            if (wideLayout.matches) setActive(null);
+            else schedulePopoverClose();
+        });
+        item.reference.addEventListener('click', (event) => {
+            if (wideLayout.matches) {
+                event.preventDefault();
+                setActive(item);
+                return;
+            }
+            if (popoverLayout.matches) {
+                event.preventDefault();
+                showPopover(item);
+            }
+        });
+
+        item.note.addEventListener('pointerenter', () => {
+            clearCloseTimer();
+            setActive(item);
+        });
+        item.note.addEventListener('pointerleave', () => setActive(null));
+        item.note.addEventListener('focusin', () => setActive(item));
+        item.note.addEventListener('focusout', () => setActive(null));
+    });
+
+    popover.addEventListener('pointerenter', clearCloseTimer);
+    popover.addEventListener('pointerleave', schedulePopoverClose);
+    popover.addEventListener('focusin', clearCloseTimer);
+    popover.addEventListener('focusout', schedulePopoverClose);
+
+    document.addEventListener('pointerdown', (event) => {
+        if (
+            popover.classList.contains('is-visible') &&
+            event.target instanceof Node &&
+            !popover.contains(event.target) &&
+            !notes.some(({ reference }) => reference.contains(event.target as Node))
+        ) hidePopover();
+    });
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && popover.classList.contains('is-visible')) hidePopover();
+    });
+    window.addEventListener('scroll', () => {
+        if (popover.classList.contains('is-visible')) hidePopover();
+    }, { passive: true });
+    window.addEventListener('resize', () => {
+        hidePopover();
+        layoutSidenotes();
+    }, { passive: true });
+    wideLayout.addEventListener('change', () => {
+        hidePopover();
+        layoutSidenotes();
+    });
+
+    layoutSidenotes();
+    window.requestAnimationFrame(layoutSidenotes);
+    void document.fonts?.ready.then(layoutSidenotes);
+}
+
+function setupMarkdownRoughAnnotations(): void {
+    const content = document.querySelector<HTMLElement>('.main-article .article-content');
+    const roughNotation = window.RoughNotation;
+    if (!content || !roughNotation) return;
+
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const annotationItems: Array<{ element: HTMLElement; annotation: RoughAnnotation }> = [];
+    const addAnnotations = (
+        selector: string,
+        config: Omit<RoughAnnotationConfig, 'animate'>
+    ): void => {
+        content.querySelectorAll<HTMLElement>(selector).forEach((element) => {
+            if (
+                element.closest('.footnotes, pre, code, h1, h2, h3, h4, h5, h6') ||
+                (element.parentElement?.matches('strong, em') ?? false)
+            ) return;
+
+            annotationItems.push({
+                element,
+                annotation: roughNotation.annotate(element, {
+                    ...config,
+                    animate: !reduceMotion
+                })
+            });
+        });
+    };
+
+    addAnnotations('strong', {
+        type: 'underline',
+        animationDuration: 420,
+        color: 'var(--accent-color)',
+        strokeWidth: 1.4,
+        padding: 1,
+        multiline: true,
+        iterations: 1
+    });
+    addAnnotations('em', {
+        type: 'underline',
+        animationDuration: 380,
+        color: 'var(--card-text-color-secondary)',
+        strokeWidth: 1.2,
+        padding: 1,
+        multiline: true,
+        iterations: 1
+    });
+    addAnnotations('blockquote', {
+        type: 'bracket',
+        brackets: 'right',
+        animationDuration: 520,
+        color: 'var(--accent-color)',
+        strokeWidth: 1.6,
+        padding: 5,
+        iterations: 2
+    });
+    addAnnotations('del', {
+        type: 'crossed-off',
+        animationDuration: 430,
+        color: 'var(--card-text-color-tertiary)',
+        strokeWidth: 1.3,
+        padding: 1,
+        multiline: true,
+        iterations: 1
+    });
+    addAnnotations('mark', {
+        type: 'highlight',
+        animationDuration: 480,
+        color: 'rgba(250, 204, 21, 0.28)',
+        padding: 1,
+        multiline: true,
+        iterations: 1
+    });
+
+    if (annotationItems.length === 0) return;
+    if (!('IntersectionObserver' in window) || reduceMotion) {
+        annotationItems.forEach(({ annotation }) => annotation.show());
+        return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const item = annotationItems.find(({ element }) => element === entry.target);
+            if (!item) return;
+            item.annotation.show();
+            observer.unobserve(item.element);
+        });
+    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.45 });
+    annotationItems.forEach(({ element }) => observer.observe(element));
+}
+
 function setupArticleFocusMode(): void {
     if (!document.documentElement.classList.contains('article-focus-mode')) return;
 
@@ -539,5 +998,7 @@ window.addEventListener('load', () => {
     setupTocAutoCollapse();
     setupReadingProgress(setupArticleStats());
     setupBackToTop();
+    setupArticleSidenotes();
+    setupMarkdownRoughAnnotations();
     setupArticleFocusMode();
 });

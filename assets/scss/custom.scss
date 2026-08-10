@@ -268,6 +268,9 @@
 
 /* Focused post layout: keep the article and its ToC, collapse site navigation. */
 html.article-focus-mode .article-page {
+    --article-font-size: 1.8rem;
+    --article-line-height: 1.9;
+
     .left-sidebar {
         position: fixed;
         z-index: 980;
@@ -296,14 +299,291 @@ html.article-focus-mode .article-page {
     }
 
     .main-container {
-        max-width: 140rem;
-        --right-sidebar-max-width: 29rem;
+        max-width: 134rem;
+        --right-sidebar-max-width: 31rem;
         justify-content: center;
     }
 
     main.main {
-        max-width: 98rem;
+        max-width: 90rem;
         margin-left: 0;
+    }
+}
+
+/* Footnotes become contextual sidenotes on wide screens and a preview on narrow screens. */
+.article-content .footnote-ref {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.65em;
+    min-height: 1.65em;
+    margin-inline: 0.08em;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent-color) 14%, transparent);
+    color: var(--accent-color);
+    font-family: var(--base-font-family);
+    font-size: 0.68em;
+    font-weight: 700;
+    line-height: 1;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover,
+    &.is-sidenote-active {
+        background: var(--accent-color);
+        color: var(--accent-color-text);
+        box-shadow: 0 0 0 0.3rem color-mix(in srgb, var(--accent-color) 16%, transparent);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--accent-color);
+        outline-offset: 3px;
+    }
+}
+
+.article-content .has-article-sidenote {
+    line-height: 0;
+}
+
+.article-sidenotes {
+    display: none;
+}
+
+.article-sidenote-connectors {
+    display: none;
+}
+
+html.article-sidenotes-enhanced .article-page .main-article .footnotes {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.article-footnote-popover {
+    position: fixed;
+    z-index: 1080;
+    visibility: hidden;
+    width: calc(100vw - 2.4rem);
+    max-width: 34rem;
+    padding: 1.4rem 1.6rem;
+    overflow: visible;
+    border: 1px solid color-mix(in srgb, var(--accent-color) 30%, var(--card-separator-color));
+    border-radius: 1.4rem;
+    background: var(--card-background);
+    box-shadow: var(--shadow-l2);
+    color: var(--card-text-color-main);
+    font-family: var(--article-font-family);
+    font-size: 1.5rem;
+    line-height: 1.65;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(0.6rem);
+    transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.18s;
+
+    &::after {
+        position: absolute;
+        left: 50%;
+        width: 1rem;
+        height: 1rem;
+        border: inherit;
+        background: var(--card-background);
+        content: "";
+        transform: translateX(-50%) rotate(45deg);
+    }
+
+    &[data-placement="top"]::after {
+        bottom: -0.55rem;
+        border-top: 0;
+        border-left: 0;
+    }
+
+    &[data-placement="bottom"]::after {
+        top: -0.55rem;
+        border-right: 0;
+        border-bottom: 0;
+    }
+
+    &.is-visible {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0);
+    }
+
+    > .article-sidenote__content {
+        max-height: 45vh;
+        overflow: auto;
+    }
+
+    p {
+        margin: 0;
+
+        & + p {
+            margin-top: 0.8em;
+        }
+    }
+}
+
+@media (min-width: 1440px) {
+    html.article-sidenotes-enhanced .article-page {
+        .main-container {
+            position: relative;
+            max-width: 160rem;
+        }
+
+        .article-sidenotes {
+            position: relative;
+            z-index: 5;
+            display: block;
+            align-self: stretch;
+            order: -3;
+            flex: 0 0 24rem;
+            width: 24rem;
+            min-height: 100vh;
+            opacity: 1;
+            transition: opacity 0.2s ease;
+        }
+
+        &.reading-sidebar-open .article-sidenotes {
+            opacity: 0.08;
+            pointer-events: none;
+        }
+
+        &.reading-sidebar-open .article-sidenote-connectors {
+            opacity: 0.08;
+        }
+    }
+
+    .article-sidenote-connectors {
+        position: absolute;
+        z-index: 4;
+        inset: 0;
+        display: block;
+        overflow: visible;
+        color: var(--accent-color);
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+    }
+
+    .article-sidenote-connector {
+        path {
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.35;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: var(--connector-length);
+            stroke-dashoffset: var(--connector-length);
+            opacity: 0;
+        }
+
+        path:nth-child(2) {
+            stroke-width: 0.9;
+        }
+
+        &.is-drawn path {
+            stroke-dashoffset: 0;
+            opacity: 0.28;
+            transition: stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+        }
+
+        &.is-drawn path:nth-child(2) {
+            opacity: 0.16;
+            transition-delay: 0.08s;
+        }
+
+        &.is-active path {
+            opacity: 0.9;
+            animation: sidenote-connector-redraw 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        &.is-active path:nth-child(2) {
+            opacity: 0.5;
+            animation-delay: 0.06s;
+        }
+    }
+
+    @keyframes sidenote-connector-redraw {
+        from {
+            stroke-dashoffset: var(--connector-length);
+        }
+
+        to {
+            stroke-dashoffset: 0;
+        }
+    }
+
+    .article-sidenotes__title {
+        position: absolute;
+        top: 1rem;
+        right: 0;
+        color: var(--card-text-color-tertiary);
+        font-family: var(--code-font-family);
+        font-size: 1.1rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+    }
+
+    .article-sidenote {
+        position: absolute;
+        z-index: 5;
+        right: 0;
+        width: 100%;
+        padding: 1.2rem 1.3rem 1.2rem 3.8rem;
+        border: 1px solid var(--card-separator-color);
+        border-radius: 1.2rem;
+        background: color-mix(in srgb, var(--card-background) 90%, transparent);
+        box-shadow: var(--shadow-l1);
+        color: var(--card-text-color-secondary);
+        font-family: var(--article-font-family);
+        font-size: 1.35rem;
+        line-height: 1.65;
+        transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+
+        &.is-active {
+            border-color: color-mix(in srgb, var(--accent-color) 55%, transparent);
+            background: color-mix(in srgb, var(--card-background) 86%, var(--accent-color) 14%);
+            box-shadow: var(--shadow-l2);
+            color: var(--card-text-color-main);
+        }
+
+        p {
+            margin: 0;
+
+            & + p {
+                margin-top: 0.8em;
+            }
+        }
+    }
+
+    .article-sidenote__number {
+        position: absolute;
+        top: 1rem;
+        left: 1.1rem;
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        background: color-mix(in srgb, var(--accent-color) 18%, transparent);
+        color: var(--accent-color);
+        font-family: var(--base-font-family);
+        font-size: 1.1rem;
+        font-weight: 700;
+        line-height: 1;
+
+        &:focus-visible {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+    }
+
+    .article-footnote-popover {
+        display: none;
     }
 }
 
@@ -527,6 +807,19 @@ html.article-focus-mode .article-page {
 
     html.article-focus-mode .article-page .left-sidebar {
         transition: none;
+    }
+
+    .article-sidenote,
+    .article-sidenotes,
+    .article-sidenote-connectors,
+    .article-footnote-popover,
+    .article-content .footnote-ref {
+        transition: none;
+    }
+
+    .article-sidenote-connector path {
+        animation: none !important;
+        transition: none !important;
     }
 
     .article-reading-celebration__burst {
