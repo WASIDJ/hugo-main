@@ -473,7 +473,7 @@ html.article-sidenotes-enhanced .article-page .main-article .footnotes {
         path {
             fill: none;
             stroke: currentColor;
-            stroke-width: 1.35;
+            stroke-width: 1.1;
             stroke-linecap: round;
             stroke-linejoin: round;
             stroke-dasharray: var(--connector-length);
@@ -482,27 +482,27 @@ html.article-sidenotes-enhanced .article-page .main-article .footnotes {
         }
 
         path:nth-child(2) {
-            stroke-width: 0.9;
+            stroke-width: 0.7;
         }
 
         &.is-drawn path {
             stroke-dashoffset: 0;
-            opacity: 0.28;
+            opacity: 0.18;
             transition: stroke-dashoffset 0.7s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
         }
 
         &.is-drawn path:nth-child(2) {
-            opacity: 0.16;
+            opacity: 0.09;
             transition-delay: 0.08s;
         }
 
         &.is-active path {
-            opacity: 0.9;
+            opacity: 0.62;
             animation: sidenote-connector-redraw 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
         }
 
         &.is-active path:nth-child(2) {
-            opacity: 0.5;
+            opacity: 0.3;
             animation-delay: 0.06s;
         }
     }

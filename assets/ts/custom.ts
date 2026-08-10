@@ -526,9 +526,10 @@ function setupArticleSidenotes(): void {
     if (!document.documentElement.classList.contains('article-focus-mode')) return;
 
     const content = document.querySelector<HTMLElement>('.main-article .article-content');
+    const article = content?.closest<HTMLElement>('.main-article');
     const container = document.querySelector<HTMLElement>('.main-container');
     const main = container?.querySelector<HTMLElement>('main.main');
-    if (!content || !container || !main) return;
+    if (!content || !article || !container || !main) return;
 
     const references = Array.from(
         content.querySelectorAll<HTMLAnchorElement>('a.footnote-ref[href^="#"]')
@@ -726,16 +727,17 @@ function setupArticleSidenotes(): void {
             notes.forEach(({ reference, note, connector }, index) => {
                 const referenceRect = reference.getBoundingClientRect();
                 const noteRect = note.getBoundingClientRect();
-                const referenceX = referenceRect.left + referenceRect.width / 2 - canvasRect.left;
+                const articleRect = article.getBoundingClientRect();
+                const referenceX = articleRect.left - canvasRect.left;
                 const referenceY = referenceRect.top + referenceRect.height / 2 - canvasRect.top;
                 const noteX = noteRect.right - canvasRect.left;
                 const noteY = noteRect.top + Math.min(noteRect.height / 2, 24) - canvasRect.top;
-                const bendX = noteX + Math.max((referenceX - noteX) * 0.52, 32);
+                const bendX = noteX + (referenceX - noteX) * 0.52;
                 const paths = Array.from(connector.querySelectorAll<SVGPathElement>('path'));
                 const jitter = index % 2 === 0 ? 1.6 : -1.6;
                 const pathData = [
-                    `M ${referenceX} ${referenceY} C ${referenceX - 34} ${referenceY + jitter}, ${bendX} ${noteY - jitter}, ${noteX} ${noteY}`,
-                    `M ${referenceX + 1.5} ${referenceY + 2} C ${referenceX - 29} ${referenceY - jitter}, ${bendX + 3} ${noteY + jitter}, ${noteX} ${noteY + 2}`
+                    `M ${referenceX} ${referenceY} C ${bendX} ${referenceY + jitter}, ${bendX} ${noteY - jitter}, ${noteX} ${noteY}`,
+                    `M ${referenceX} ${referenceY + 1.5} C ${bendX + 2} ${referenceY - jitter}, ${bendX - 1} ${noteY + jitter}, ${noteX} ${noteY + 1.5}`
                 ];
 
                 paths.forEach((path, pathIndex) => {
