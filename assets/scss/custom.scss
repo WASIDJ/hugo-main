@@ -266,10 +266,11 @@
     }
 }
 
-/* Focused post layout: keep the article and its ToC, collapse site navigation. */
+/* Focused blog-post layout: keep the article and its ToC, collapse site navigation. */
 html.article-focus-mode .article-page {
     --article-font-size: 1.8rem;
     --article-line-height: 1.9;
+    --article-focus-sidebar-width: 30rem;
 
     .left-sidebar {
         position: fixed;
@@ -278,7 +279,7 @@ html.article-focus-mode .article-page {
         bottom: 0;
         left: 0;
         display: flex;
-        width: 30rem;
+        width: var(--article-focus-sidebar-width);
         max-width: calc(100vw - 4rem);
         height: 100vh;
         max-height: none;
