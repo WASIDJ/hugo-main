@@ -266,8 +266,8 @@
     }
 }
 
-/* Focused article layout: keep the article and its ToC, collapse site navigation. */
-.article-page {
+/* Focused post layout: keep the article and its ToC, collapse site navigation. */
+html.article-focus-mode .article-page {
     .left-sidebar {
         position: fixed;
         z-index: 980;
@@ -525,7 +525,7 @@
         transition: none;
     }
 
-    .article-page .left-sidebar {
+    html.article-focus-mode .article-page .left-sidebar {
         transition: none;
     }
 

@@ -469,7 +469,7 @@ function setupBackToTop(): void {
 }
 
 function setupArticleFocusMode(): void {
-    if (!document.body.classList.contains('article-page')) return;
+    if (!document.documentElement.classList.contains('article-focus-mode')) return;
 
     const sidebar = document.querySelector<HTMLElement>('.left-sidebar');
     if (!sidebar) return;

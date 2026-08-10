@@ -6,6 +6,10 @@
     }
 </style>
 
+{{ if and .IsPage (eq .Type "post") }}
+<script>document.documentElement.classList.add('article-focus-mode');</script>
+{{ end }}
+
 <script>
     (function () {
         const customFont = document.createElement('link');
