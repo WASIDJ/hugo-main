@@ -610,7 +610,10 @@ function setupArticleSidenotes(): void {
         HTMLAnchorElement,
         { reference: RoughAnnotation; note: RoughAnnotation }
     >();
-    if (window.RoughNotation) {
+
+    const setupSidenoteRoughAnnotations = (): void => {
+        if (!window.RoughNotation || roughAnnotations.size > 0) return;
+
         notes.forEach(({ reference, note }) => {
             roughAnnotations.set(reference, {
                 reference: window.RoughNotation!.annotate(reference, {
@@ -633,6 +636,13 @@ function setupArticleSidenotes(): void {
                     iterations: 2
                 })
             });
+        });
+    };
+
+    setupSidenoteRoughAnnotations();
+    if (!window.RoughNotation) {
+        document.addEventListener('rough-notation-ready', setupSidenoteRoughAnnotations, {
+            once: true
         });
     }
 
@@ -838,10 +848,15 @@ function setupArticleSidenotes(): void {
     void document.fonts?.ready.then(layoutSidenotes);
 }
 
+let markdownRoughAnnotationsInitialized = false;
+
 function setupMarkdownRoughAnnotations(): void {
+    if (markdownRoughAnnotationsInitialized) return;
+
     const content = document.querySelector<HTMLElement>('.main-article .article-content');
     const roughNotation = window.RoughNotation;
     if (!content || !roughNotation) return;
+    markdownRoughAnnotationsInitialized = true;
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const annotationItems: Array<{ element: HTMLElement; annotation: RoughAnnotation }> = [];
@@ -928,6 +943,24 @@ function setupMarkdownRoughAnnotations(): void {
     annotationItems.forEach(({ element }) => observer.observe(element));
 }
 
+function setupRoughNotationWhenReady(): void {
+    const initialize = (): void => {
+        if (!window.RoughNotation) return;
+        document.dispatchEvent(new Event('rough-notation-ready'));
+        setupMarkdownRoughAnnotations();
+    };
+
+    if (window.RoughNotation) {
+        initialize();
+        return;
+    }
+
+    // The external deferred script executes after this bundle but before
+    // DOMContentLoaded. Keep load as a fallback for unusually slow clients.
+    document.addEventListener('DOMContentLoaded', initialize, { once: true });
+    window.addEventListener('load', initialize, { once: true });
+}
+
 function setupArticleFocusMode(): void {
     if (!document.documentElement.classList.contains('article-focus-mode')) return;
 
@@ -1000,8 +1033,8 @@ function setupCustomFeatures(): void {
     setupReadingProgress(setupArticleStats());
     setupBackToTop();
     setupArticleSidenotes();
-    setupMarkdownRoughAnnotations();
     setupArticleFocusMode();
+    setupRoughNotationWhenReady();
 }
 
 // Deferred scripts have everything they need as soon as the DOM is parsed.
