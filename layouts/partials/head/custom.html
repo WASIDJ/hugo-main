@@ -7,7 +7,13 @@
 </style>
 
 {{ if and .IsPage (eq .Type "post") }}
-<script>document.documentElement.classList.add('article-focus-mode');</script>
+{{- $hasFootnotes := gt (len (findRE `\[\^[^\]]+\]` .RawContent)) 0 -}}
+<script>
+    document.documentElement.classList.add('article-focus-mode');
+    {{- if $hasFootnotes }}
+    document.documentElement.classList.add('article-has-sidenotes');
+    {{- end }}
+</script>
 {{ end }}
 
 <script>

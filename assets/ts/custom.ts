@@ -593,8 +593,9 @@ function setupArticleSidenotes(): void {
     container.appendChild(connectorLayer);
     document.documentElement.classList.add('article-sidenotes-enhanced');
 
-    const wideLayout = window.matchMedia('(min-width: 1440px)');
-    const popoverLayout = window.matchMedia('(max-width: 1439.98px)');
+    // The rail, 900px article and ToC fit without compression from 1600px up.
+    // Browser zoom reduces the CSS viewport width, naturally switching to popovers.
+    const wideLayout = window.matchMedia('(min-width: 1600px)');
     const hoverInteraction = window.matchMedia('(hover: hover) and (pointer: fine)');
     const popover = document.createElement('aside');
     popover.className = 'article-footnote-popover';
@@ -694,7 +695,7 @@ function setupArticleSidenotes(): void {
     };
 
     const showPopover = (item: ArticleSidenote): void => {
-        if (!popoverLayout.matches) return;
+        if (wideLayout.matches) return;
         clearCloseTimer();
         setActive(item);
         popover.replaceChildren(cloneFootnoteContent(item.source));
@@ -791,10 +792,8 @@ function setupArticleSidenotes(): void {
                 setActive(item);
                 return;
             }
-            if (popoverLayout.matches) {
-                event.preventDefault();
-                showPopover(item);
-            }
+            event.preventDefault();
+            showPopover(item);
         });
 
         item.note.addEventListener('pointerenter', () => {
@@ -995,7 +994,7 @@ function setupArticleFocusMode(): void {
     setSidebarOpen(false);
 }
 
-window.addEventListener('load', () => {
+function setupCustomFeatures(): void {
     setupGlobalSearchShortcut();
     setupTocAutoCollapse();
     setupReadingProgress(setupArticleStats());
@@ -1003,4 +1002,13 @@ window.addEventListener('load', () => {
     setupArticleSidenotes();
     setupMarkdownRoughAnnotations();
     setupArticleFocusMode();
-});
+}
+
+// Deferred scripts have everything they need as soon as the DOM is parsed.
+// Waiting for `load` also waits for web fonts, comments and other third-party
+// resources, which made the generated sidenote rail appear several seconds late.
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupCustomFeatures, { once: true });
+} else {
+    setupCustomFeatures();
+}

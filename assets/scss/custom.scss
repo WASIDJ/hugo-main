@@ -429,7 +429,22 @@ html.article-sidenotes-enhanced .article-page .main-article .footnotes {
     }
 }
 
-@media (min-width: 1440px) {
+@media (min-width: 1600px) {
+    html.article-focus-mode.article-has-sidenotes .article-page .main-container {
+        position: relative;
+        max-width: 160rem;
+    }
+
+    html.article-focus-mode.article-has-sidenotes:not(.article-sidenotes-enhanced) .article-page .main-container::before {
+        display: block;
+        align-self: stretch;
+        order: -3;
+        flex: 0 0 24rem;
+        width: 24rem;
+        min-height: 100vh;
+        content: "";
+    }
+
     html.article-sidenotes-enhanced .article-page {
         .main-container {
             position: relative;
