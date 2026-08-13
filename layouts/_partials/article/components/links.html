@@ -1,0 +1,79 @@
+{{ if eq .Layout "projects" }}
+    <section class="projects-grid" aria-label="项目列表">
+        {{ range $link := .Params.links }}
+            {{- $image := partial "helper/image" (dict "Image" $link.image "Resources" $.Resources "Context" $) -}}
+            <article class="project-card">
+                <a href="{{ $link.website }}" target="_blank" rel="noopener noreferrer" aria-label="访问 {{ $link.title }}">
+                    <div class="project-card__media">
+                        {{ with $image.Permalink }}
+                            <img
+                                src="{{ . }}"
+                                alt="{{ default (printf "%s 项目封面" $link.title) $link.imageAlt }}"
+                                loading="lazy"
+                            >
+                        {{ else }}
+                            <div class="project-card__placeholder" aria-hidden="true">
+                                <span>{{ $link.title }}</span>
+                            </div>
+                        {{ end }}
+                    </div>
+
+                    <div class="project-card__body">
+                        {{ with $link.status }}
+                            <span class="project-card__status">{{ . }}</span>
+                        {{ end }}
+
+                        <h2 class="project-card__title">{{ $link.title }}</h2>
+
+                        {{ with $link.description }}
+                            <p class="project-card__description">{{ . }}</p>
+                        {{ end }}
+
+                        <span class="project-card__cta">
+                            访问项目
+                            {{ partial "helper/icon" "chevron-right" }}
+                        </span>
+                    </div>
+                </a>
+            </article>
+        {{ end }}
+    </section>
+{{ else }}
+    <div class="article-list--compact links">
+        {{ range $link := .Params.links }}
+            <article>
+                <a href="{{ $link.website }}" target="_blank" rel="noopener">
+                    <div class="article-details">
+                        <h2 class="article-title">{{ $link.title }}</h2>
+                        <footer class="article-meta">
+                            {{ with $link.description }}
+                                {{ . }}
+                            {{ else }}
+                                {{ $link.website }}
+                            {{ end }}
+                        </footer>
+                    </div>
+
+                    {{- $image := partial "helper/image" (dict "Image" $link.image "Resources" $.Resources "Context" .) -}}
+                    {{- with $image -}}
+                        <div class="article-image">
+                            {{ partial "helper/thumbnail-image" (dict
+                                "Resource" .Resource
+                                "Width" 60
+                                "Height" 60
+                                "Resize" $.Site.Params.ImageProcessing.Thumbnail.Enabled
+                                "Attributes" (dict
+                                    "src" $image.Permalink
+                                    "alt" $link.title
+                                    "loading" "lazy"
+                                    "width" .Width
+                                    "height" .Height
+                                )
+                            ) }}
+                        </div>
+                    {{ end }}
+                </a>
+            </article>
+        {{ end }}
+    </div>
+{{ end }}
