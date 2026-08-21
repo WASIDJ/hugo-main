@@ -12,6 +12,8 @@ markup:
     highlight:
         noClasses: false
         codeFences: true
+        # Keep this as a fallback for legacy posts; new code blocks should
+        # always declare their language explicitly (for example, ```bash).
         guessSyntax: true
         lineNos: false
 

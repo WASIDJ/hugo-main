@@ -5,24 +5,30 @@
     --code-block-background: #f6f8fa;
     --code-block-foreground: #24292f;
     --code-block-muted: #6e7781;
+    --code-block-comment: #6e7781;
+    --code-block-string: #0a7f3f;
     --code-block-keyword: #cf222e;
     --code-block-function: #8250df;
     --code-block-name: #0550ae;
-    --code-block-string: #0a3069;
     --code-block-number: #953800;
     --code-block-operator: #116329;
+    --code-block-punctuation: #57606a;
+    --code-block-line-highlight: rgba(9, 105, 218, 0.08);
 }
 
 [data-scheme="dark"] {
     --code-block-background: #1b1f27;
     --code-block-foreground: #d7dae0;
     --code-block-muted: #8b929e;
+    --code-block-comment: #8b949e;
+    --code-block-string: #98c379;
     --code-block-keyword: #c678dd;
     --code-block-function: #61afef;
     --code-block-name: #e5c07b;
-    --code-block-string: #98c379;
     --code-block-number: #d19a66;
     --code-block-operator: #56b6c2;
+    --code-block-punctuation: #abb2bf;
+    --code-block-line-highlight: rgba(110, 168, 254, 0.14);
 }
 
 .article-reading-progress {
@@ -371,7 +377,7 @@
     pre {
         color: var(--code-block-foreground);
         font-size: 1.6rem;
-        font-weight: 500;
+        font-weight: 400;
         line-height: 1.65;
         font-variant-ligatures: contextual;
         font-feature-settings: "calt" 1, "liga" 1;
@@ -387,11 +393,17 @@
             font-weight: 600;
         }
 
-        .nf, .fm, .nb, .bp {
+        .nf, .fm {
             color: var(--code-block-function);
+            font-weight: 600;
         }
 
-        .na, .nc, .nd, .ne, .nl, .nn, .nx, .py {
+        .nb, .bp {
+            color: var(--code-block-name);
+            font-weight: 600;
+        }
+
+        .na, .nc, .nd, .ne, .nl, .nn, .nx, .py, .nv, .vc, .vg, .vi, .vm {
             color: var(--code-block-name);
         }
 
@@ -407,13 +419,23 @@
             color: var(--code-block-operator);
         }
 
+        .p {
+            color: var(--code-block-punctuation);
+        }
+
         .c, .ch, .cm, .c1, .cs, .cp, .cpf, .gu {
-            color: var(--code-block-muted);
+            color: var(--code-block-comment);
             font-style: italic;
         }
 
         .nt {
             color: var(--code-block-keyword);
+        }
+
+        /* Supports Hugo's {hl_lines="..."} option. */
+        .hl {
+            background: var(--code-block-line-highlight);
+            box-shadow: inset 3px 0 0 var(--accent-color);
         }
     }
 }
