@@ -1077,3 +1077,17 @@ html.article-sidenotes-enhanced .article-page .main-article .footnotes {
         transform: translate(-50%, 0);
     }
 }
+/* Keep the visible KaTeX layer selectable while leaving its hidden
+ * accessibility layer out of the browser selection range. The copy-tex
+ * companion script still provides the original TeX when copying a formula. */
+.article-content .katex,
+.article-content .katex-html,
+.article-content .katex-html * {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.article-content .katex-mathml {
+    user-select: none;
+    -webkit-user-select: none;
+}

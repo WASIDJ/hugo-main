@@ -27,6 +27,8 @@ params:
         avatar: img/avatar_cat.png
 
     article:
+        # Render inline and display TeX used throughout the imported posts.
+        math: true
         viewCount: true
         statsEndpoint: https://www.jeffkafka.top/api/article-stats
 
