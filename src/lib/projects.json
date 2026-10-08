@@ -1,0 +1,62 @@
+[
+  {
+    "id": "kite-rpc",
+    "name": "KiteRPC",
+    "label": "DISTRIBUTED SYSTEMS",
+    "color": "blue",
+    "tags": ["Go", "TCP", "etcd"],
+    "description": "从 TCP 分帧到服务治理，拆解一次 RPC 调用的完整路径。",
+    "problem": "如何用可阅读的实现理解 RPC 的协议、并发与服务治理，而不隐藏在框架抽象之后？",
+    "contribution": "公开维护的教学级 Go RPC 实现：自定义二进制分帧、Future 多路复用、注册发现与熔断限流。",
+    "tradeoff": "不依赖 IDL 桩代码，使用动态反射分发；优先呈现底层机制与学习路径。",
+    "repo": "https://github.com/WASIDJ/kite-rpc",
+    "evidence": "https://github.com/WASIDJ/kite-rpc#readme",
+    "diagram": ["TCP / codec", "Future / request ID", "etcd / circuit breaker"]
+  },
+  {
+    "id": "pulse-im",
+    "name": "Pulse IM",
+    "label": "REALTIME ENGINEERING",
+    "color": "green",
+    "tags": ["Go", "Vue", "WebSocket"],
+    "description": "让长连接、消息路由与音视频信令，成为可复现的工程系统。",
+    "problem": "如何将即时通信项目中的环境耦合和隐式副作用，改造成可配置、可部署的实现？",
+    "contribution": "基于开源生态二次开发与工程重构：显式依赖注入、Channel / Kafka 路由、WebRTC 信令和 Docker 编排。",
+    "tradeoff": "保留低依赖的单机 Channel 模式，同时提供 Kafka 模式探索分布式消息转发。",
+    "repo": "https://github.com/WASIDJ/pulse-im",
+    "evidence": "https://github.com/WASIDJ/pulse-im#readme",
+    "diagram": ["Vue / WebSocket", "Channel ↔ Kafka", "MySQL / Redis"]
+  },
+  {
+    "id": "sparksite",
+    "name": "SparkSite",
+    "label": "AGENT WORKSPACE",
+    "color": "mauve",
+    "tags": ["Next.js", "Agent Kit", "E2B"],
+    "description": "自然语言到代码，再到隔离沙箱里的即时预览。",
+    "problem": "如何将 Agent 的多轮工具调用与可运行的 Web 原型连接起来？",
+    "contribution": "公开维护的早期实验平台：状态化 Code Agent、E2B 沙箱、源码 / 预览双视图及项目持久化。",
+    "tradeoff": "用独立云端沙箱提供运行环境，用持久化工作流管理生成过程；定位为原型与学习实验。",
+    "repo": "https://github.com/WASIDJ/sparksite",
+    "evidence": "https://github.com/WASIDJ/sparksite#readme",
+    "diagram": ["Prompt / Agent Kit", "Tools / E2B sandbox", "Source ↔ preview"]
+  },
+  {
+    "id": "y2b",
+    "name": "y2b",
+    "label": "AUTOMATION PIPELINE",
+    "color": "peach",
+    "tags": ["Go", "FFmpeg", "systemd"],
+    "description": "为低内存 VPS 构建可恢复的媒体任务流水线。",
+    "problem": "如何在有限资源上编排下载、章节拆分、字幕与投稿，并从失败中恢复？",
+    "contribution": "公开维护的 Go 编排服务：受限任务日志、原子队列持久化、取消重试与中文控制台。",
+    "tradeoff": "媒体通过外部工具流式落盘，Go 管理元数据；默认复用字幕以减少转码。",
+    "repo": "https://github.com/WASIDJ/y2b",
+    "evidence": "https://github.com/WASIDJ/y2b#readme",
+    "diagram": [
+      "Download / yt-dlp",
+      "Chapters / subtitles",
+      "Queue / retry / publish"
+    ]
+  }
+]

@@ -12,3 +12,12 @@ node_modules/
 .vscode/
 *.swp
 *~
+
+# Next.js and verification artifacts
+.next/
+out/
+.generated/
+next-env.d.ts
+test-results/
+playwright-report/
+.cache/

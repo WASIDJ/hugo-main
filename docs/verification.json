@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-08",
+  "environment": "Local static preview with gzip and immutable caching for hashed Next assets; Lighthouse mobile simulation; Google Chrome on macOS",
+  "contentSha": "eb491436d41130c0585c08eb0cfc72a3be1ae4ff",
+  "unitTests": 9,
+  "browserTests": 13,
+  "legacyUrls": 167,
+  "publishedPosts": 8,
+  "excludedDrafts": 16,
+  "excludedInternalFiles": 1,
+  "axeHome": {
+    "dark": 0,
+    "light": 0
+  },
+  "pages": [
+    {
+      "page": "/",
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "seo": 100
+      },
+      "lcpMs": 2155,
+      "cls": 0,
+      "fetchTime": "2026-10-08T06:05:50.936Z"
+    },
+    {
+      "page": "/page/projects/",
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "seo": 100
+      },
+      "lcpMs": 2155,
+      "cls": 0,
+      "fetchTime": "2026-10-08T06:06:00.856Z"
+    },
+    {
+      "page": "/post/2026-08-22-counting-sort/",
+      "scores": {
+        "performance": 98,
+        "accessibility": 100,
+        "seo": 100
+      },
+      "lcpMs": 2255,
+      "cls": 0,
+      "fetchTime": "2026-10-08T06:06:10.714Z"
+    }
+  ],
+  "limitations": "Lab measurements, not production field data. Actual search index and AI citations require later observation."
+}

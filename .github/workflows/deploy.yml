@@ -1,81 +1,62 @@
-# Sample workflow for building and deploying a Hugo site to GitHub Pages
-name: Deploy Hugo site to Pages
-
+name: Build and deploy Ryou workspace
 on:
-  # Runs on pushes targeting the default branch
   push:
-    branches: ["main"]
-
-  # 新增：当有其他仓库用 repository_dispatch 调用时也部署
+    branches: [main]
+  pull_request:
   repository_dispatch:
     types: [blog-content-updated]
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
-  contents: write
-  pages: write
-  id-token: write
-
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+  contents: read
 concurrency:
-  group: "pages"
+  group: workspace-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
   cancel-in-progress: false
-
-# Default to bash
-defaults:
-  run:
-    shell: bash
-
 jobs:
-  # Build job
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-
-      # 仅当由其他仓库通过 repository_dispatch 触发时，才自动把所有子模块更新到远程最新提交
-      - name: Update all submodules to latest
-        if: github.event_name == 'repository_dispatch'
+      - name: Pin current published content
+        if: github.event_name != 'pull_request'
+        env:
+          CONTENT_SHA: ${{ github.event.client_payload.sha }}
         run: |
-          git submodule update --init --recursive --remote
-          echo "Submodule status after update:"
-          git submodule status
-          
-          # 检查是否有变化
-          if git diff --quiet && git diff --cached --quiet; then
-            echo "No changes in submodules"
-          else
-            echo "Submodule changes detected, committing..."
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add .
-            git commit -m "chore: update content submodule to latest"
-            git push origin main
+          git -C content fetch origin main
+          if [[ "${{ github.event_name }}" == 'repository_dispatch' ]]; then
+            if [[ ! "$CONTENT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+              echo 'Missing or invalid content SHA'
+              exit 1
+            fi
+            git -C content cat-file -e "$CONTENT_SHA^{commit}"
+            git -C content merge-base --is-ancestor "$CONTENT_SHA" origin/main
           fi
-
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@v3.0.0
+          # Pin once at build start. Late dispatch events cannot restore older content.
+          git -C content checkout --detach origin/main
+          git -C content rev-parse HEAD
+      - uses: actions/setup-node@v4
         with:
-          hugo-version: "latest"
-          extended: true
-
-      - name: Build with Hugo
-        run: |
-          # 修正：删除未定义的baseURL变量，使用Hugo配置文件中的baseURL
-          hugo --minify
-
-      - name: Deploy to GitHub.io
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Save preview and rollback artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-${{ github.sha }}
+          path: out
+          include-hidden-files: true
+      - name: Deploy static export
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v4
         with:
-          PERSONAL_TOKEN: ${{ secrets.GH_PAGE_ACTION_TOKEN }}
-          EXTERNAL_REPOSITORY: wasidj/wasidj.github.io
-          PUBLISH_BRANCH: main
-          PUBLISH_DIR: ./public
-          commit_message: ${{ github.event.head_commit.message }}
+          personal_token: ${{ secrets.GH_PAGE_ACTION_TOKEN }}
+          external_repository: WASIDJ/wasidj.github.io
+          publish_branch: main
+          publish_dir: out
+          commit_message: "deploy: Next.js workspace ${{ github.sha }}"
