@@ -21,3 +21,8 @@ next-env.d.ts
 test-results/
 playwright-report/
 .cache/
+
+# Private SSH portal artifacts and runtime secrets
+ssh-portal/dist/
+ssh-portal/gateway/gateway
+ssh-portal/runtime/
