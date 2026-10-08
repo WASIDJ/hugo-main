@@ -44,12 +44,17 @@ if (!process.argv.includes("--skip-serve")) {
   const existing = JSON.parse(
     ssh("/opt/homebrew/bin/tailscale serve status --json"),
   );
-  const conflicting = Object.keys(existing.Web || {}).some((key) =>
+  const bindings = Object.entries(existing.Web || {}).filter(([key]) =>
     key.endsWith(":8443"),
   );
-  if (conflicting && !JSON.stringify(existing).includes("127.0.0.1:8022"))
+  const handlers = bindings.length === 1 ? bindings[0][1].Handlers || {} : {};
+  const ownBinding =
+    existing.TCP?.["8443"]?.HTTPS === true &&
+    Object.keys(handlers).length === 1 &&
+    handlers["/"]?.Proxy === "http://127.0.0.1:8022";
+  if ((existing.TCP?.["8443"] || bindings.length) && !ownBinding)
     throw new Error(
-      "Port 8443 already has a Serve handler; refusing to overwrite",
+      "Port 8443 already has a different Serve handler; refusing to overwrite",
     );
   execFileSync(
     "ssh",
