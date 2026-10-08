@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { TmuxProvider } from "@/components/tmux-provider";
+import { site } from "@/lib/site";
 import "./globals.css";
+import "./terminal.css";
 import "katex/dist/katex.min.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.jeffkafka.top"),
@@ -16,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" data-theme="dark" suppressHydrationWarning>
       <body>
-        {children}
+        <TmuxProvider paths={Object.keys(site.routes)}>{children}</TmuxProvider>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

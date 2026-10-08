@@ -297,6 +297,13 @@ export function Article({
     };
   }, [page.html]);
   useEffect(() => {
+    const root = article.current;
+    if (!root) return;
+    const load = () => setShowComments(true);
+    root.addEventListener("tmux:comments", load);
+    return () => root.removeEventListener("tmux:comments", load);
+  }, []);
+  useEffect(() => {
     if (!showComments || !comments.current) return;
     const element = comments.current;
     const theme =

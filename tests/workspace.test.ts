@@ -9,14 +9,13 @@ import {
   resizeParent,
   validTree,
 } from "../src/lib/workspace";
-test("splits stop at four panes and closing collapses branches", () => {
+test("terminal splits exceed the old four-pane cap and collapse branches on close", () => {
   let tree = defaultTree(true);
-  tree = split(tree, "main", "x", "fourth", "intro");
-  assert.equal(leaves(tree).length, 4);
-  assert.deepEqual(split(tree, "main", "y", "fifth", "projects"), tree);
-  const next = remove(tree, "fourth")!;
-  assert.equal(leaves(next).length, 3);
-  assert.equal(next.kind, "split");
+  for (let i = 0; i < 5; i++)
+    tree = split(tree, "main", "x", `extra-${i}`, "intro");
+  assert.equal(leaves(tree).length, 8);
+  const next = remove(tree, "extra-4")!;
+  assert.equal(leaves(next).length, 7);
 });
 test("last pane removal returns null so UI can restore canonical layout", () => {
   assert.equal(remove(defaultTree(false), "main"), null);

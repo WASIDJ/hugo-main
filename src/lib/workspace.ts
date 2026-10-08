@@ -31,7 +31,7 @@ export function split(
   newId: string,
   content: string,
 ): Tree {
-  if (count(tree) >= 4) return tree;
+  if (count(tree) >= 32) return tree;
   const current = leaves(tree).find((l) => l.id === id);
   return current
     ? replace(tree, id, {
@@ -104,13 +104,13 @@ export function validTree(value: unknown, allowed: Set<string>): value is Tree {
   let n = 0;
   const ids = new Set<string>();
   const walk = (v: unknown, depth: number): boolean => {
-    if (!v || typeof v !== "object" || depth > 4) return false;
+    if (!v || typeof v !== "object" || depth > 12) return false;
     const t = v as Tree;
     if (typeof t.id !== "string" || !t.id || ids.has(t.id)) return false;
     ids.add(t.id);
     if (t.kind === "leaf")
       return (
-        ++n <= 4 && typeof t.content === "string" && allowed.has(t.content)
+        ++n <= 32 && typeof t.content === "string" && allowed.has(t.content)
       );
     return (
       t.kind === "split" &&

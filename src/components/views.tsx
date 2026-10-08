@@ -23,69 +23,19 @@ const date = (value: string) =>
     : "";
 export function Intro() {
   return (
-    <section className="intro">
-      <div className="command">
-        <span>ryou@workspace</span>
-        <span className="prompt">~ $</span> whoami
-      </div>
-      <div className="hero-label">
-        <span className="live-dot" /> PERSONAL WORKSPACE / 个人工作台
-      </div>
-      <h1>
-        你好，我是 <span>Ryou</span>
-        <span className="cursor" aria-hidden="true">
-          ▍
-        </span>
-      </h1>
-      <p className="hero-statement">
-        构建一些东西。
-        <br />
-        保留自己的思考。
+    <section className="terminal-whoami">
+      <h1>Ryou</h1>
+      <p>Go / Backend · AI Infra · Agent Engineering</p>
+      <p>
+        <Link href="/post/">posts/</Link>
+        {"  "}
+        <Link href="/page/projects/">projects/</Link>
+        {"  "}
+        <Link href="/page/关于/">about.md</Link>
+        {"  "}
+        <Link href="/page/友链/">links.md</Link>
       </p>
-      <p className="intro-description">
-        在系统与工具之间探索，也在阅读和写作中寻找自己的答案。这里记录我的工程实践、开源项目，以及尚未结束的问题。
-      </p>
-      <div className="skill-tags">
-        <span>Go / Backend</span>
-        <span>AI Infra</span>
-        <span>Agent Engineering</span>
-      </div>
-      <div className="hero-actions">
-        <Link className="primary-button" href="/page/projects/">
-          探索我的项目 <ArrowUpRight size={16} />
-        </Link>
-        <a
-          className="secondary-button"
-          href="https://github.com/WASIDJ"
-          target="_blank"
-          rel="noreferrer"
-        >
-          GitHub <ArrowUpRight size={15} />
-        </a>
-      </div>
-      <div className="divider-label">WHAT I SPEND MY TIME ON</div>
-      <div className="interests">
-        <div>
-          <Terminal size={18} />
-          <span>
-            <strong>Build</strong>
-            <small>系统、工具与小实验</small>
-          </span>
-        </div>
-        <div>
-          <BookOpen size={18} />
-          <span>
-            <strong>Read & think</strong>
-            <small>阅读、写作与长期问题</small>
-          </span>
-        </div>
-      </div>
-      <footer className="intro-footer">
-        <span>
-          <MapPin size={13} /> Shanghai, China
-        </span>
-        <span>保持好奇，持续实践。</span>
-      </footer>
+      <p className="terminal-usage"># Ctrl+q ?</p>
     </section>
   );
 }

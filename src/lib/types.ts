@@ -54,6 +54,8 @@ export interface Route {
   term?: string;
 }
 export interface Catalog {
+  routes: Record<string, Route>;
+  pages: Pick<Page, "path" | "title" | "paneKey" | "section">[];
   posts: Post[];
   projects: Project[];
   friends: SiteLink[];

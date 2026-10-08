@@ -1,0 +1,781 @@
+/* Minimal zsh/p10k + tmux skin, derived from the owner's repository configuration. */
+@font-face {
+  font-family: "Terminal Mono";
+  src: url("/fonts/FiraCodeNerdFontMono.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --mono: "Terminal Mono", "FiraCode Nerd Font Mono", monospace;
+  --red: #f38ba8;
+}
+:root[data-theme="light"] {
+  --red: #d20f39;
+}
+html,
+body {
+  background: var(--base);
+}
+.terminal-native {
+  --sans: var(--mono);
+  height: 100dvh;
+  min-height: 0;
+  max-width: none;
+  padding: 12px;
+  gap: 0;
+  font-family: var(--mono);
+  font-weight: 400;
+  line-height: 1.35;
+  -webkit-text-stroke: 0.15px;
+}
+.terminal-native
+  :is(
+    h1,
+    h2,
+    h3,
+    h4,
+    p,
+    button,
+    input,
+    summary,
+    li,
+    a,
+    span,
+    small,
+    time,
+    th,
+    td,
+    kbd,
+    label,
+    pre
+  ) {
+  font-size: inherit;
+  letter-spacing: normal;
+  font-weight: 400;
+}
+.terminal-native :is(input, button, h1, h2, h3, h4, p, summary, pre, kbd) {
+  font-family: var(--mono);
+}
+.terminal-native .workspace {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--base);
+}
+.terminal-native .pane {
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  min-height: 0;
+  background: var(--base);
+}
+.terminal-native .pane-body {
+  padding: 0 12px 0 0;
+  scrollbar-width: none;
+  overflow: auto;
+  scroll-behavior: auto;
+}
+.terminal-native .split {
+  overflow: hidden;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+.terminal-native .split-y {
+  flex-direction: column;
+}
+.terminal-native .split-part {
+  display: flex;
+  overflow: hidden;
+  flex-shrink: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.terminal-native .resize-handle {
+  background: var(--overlay);
+  width: 1px;
+  height: auto;
+  cursor: default;
+  flex-shrink: 0;
+}
+.terminal-native .handle-y {
+  height: 1px;
+  width: auto;
+}
+.terminal-native[data-mouse="on"] .handle-x {
+  cursor: col-resize;
+}
+.terminal-native[data-mouse="on"] .handle-y {
+  cursor: row-resize;
+}
+.terminal-native .resize-handle:hover {
+  background: var(--overlay);
+}
+.terminal-native .pane.is-focused {
+  box-shadow: none;
+}
+.terminal-native .pane:focus-visible {
+  outline: 0;
+}
+.terminal-native :is(.intro, .listing, .project-listing, .about, .article) {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+  min-height: 0;
+  height: auto;
+  display: block;
+}
+.terminal-native
+  :is(
+    .section-heading,
+    .project-top,
+    .project-bottom,
+    .article-header,
+    .listing-footer,
+    .intro-footer,
+    .hero-actions,
+    .hero-label,
+    .interests,
+    .about-grid,
+    .friend-list > a,
+    .contact-card
+  ) {
+  display: block;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin: 0 0 1em;
+  max-width: none;
+  min-height: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.terminal-native
+  :is(
+    .eyebrow,
+    .command,
+    .post-meta,
+    .post-index,
+    .post-tags,
+    .architecture,
+    .skill-tags,
+    .project-mini > span,
+    .archive-year time,
+    .article-meta,
+    .article-footer,
+    .text-link
+  ) {
+  font-size: 1em;
+  letter-spacing: 0;
+  line-height: inherit;
+}
+.terminal-native h1,
+.terminal-native h2,
+.terminal-native h3 {
+  font-size: 1em !important;
+  line-height: inherit;
+  letter-spacing: 0;
+  margin: 1em 0 0.5em;
+  font-weight: 400;
+  color: var(--text);
+}
+.terminal-native p {
+  font-size: 1em !important;
+  line-height: inherit;
+  margin: 0 0 1em;
+  max-width: none;
+  opacity: 1;
+  color: var(--text);
+}
+.terminal-native
+  :is(.project-grid, .project-mini-grid, .taxonomy-grid, .about-grid) {
+  display: block;
+}
+.terminal-native
+  :is(
+    .project-card,
+    .project-mini,
+    .contact-card,
+    .about-grid > div,
+    .architecture,
+    .taxonomy-grid > a
+  ) {
+  display: block;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+  padding: 0;
+  margin: 0 0 1em;
+  min-height: 0;
+}
+.terminal-native .project-card {
+  border-bottom: 1px dashed var(--overlay);
+  padding-bottom: 1em;
+  margin-bottom: 1em;
+}
+.terminal-native .project-description {
+  min-height: 0;
+}
+.terminal-native .project-top {
+  color: var(--accent);
+  margin: 0;
+}
+.terminal-native .project-card > h2 {
+  color: var(--accent);
+  margin: 0.5em 0;
+}
+.terminal-native .case-detail :is(p, h3) {
+  font-size: 1em;
+  margin: 0.5em 0;
+}
+.terminal-native .case-detail h3::before {
+  content: "# ";
+  color: var(--overlay);
+}
+.terminal-native .architecture {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5ch;
+}
+.terminal-native .architecture > div {
+  font: inherit;
+  display: flex;
+  gap: 0.5ch;
+}
+.terminal-native .architecture > div:not(:last-child)::after {
+  content: " -> ";
+  color: var(--overlay);
+}
+.terminal-native .skill-tags {
+  gap: 1ch;
+  margin: 0.5em 0;
+}
+.terminal-native .skill-tags > span {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--text);
+  font: inherit;
+}
+.terminal-native .skill-tags > span::before {
+  content: "[";
+  color: var(--overlay);
+}
+.terminal-native .skill-tags > span::after {
+  content: "]";
+  color: var(--overlay);
+}
+.terminal-native :is(.listing-footer, .article-footer) {
+  display: flex;
+  gap: 2ch;
+  flex-wrap: wrap;
+}
+.terminal-native
+  :is(.post-row, .archive-year > a, .friend-list > a, .search-results > a) {
+  border: 0;
+  padding: 0;
+  margin: 0 0 1em;
+  gap: 1ch;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  font: inherit;
+}
+.terminal-native .post-list {
+  margin: 1em 0;
+}
+.terminal-native .post-row {
+  display: flex;
+  align-items: flex-start;
+}
+.terminal-native .post-row h2 {
+  margin: 0;
+  font-size: 1em;
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+.terminal-native .post-meta {
+  margin: 0;
+}
+.terminal-native .post-index {
+  color: var(--overlay);
+  padding: 0;
+  font: inherit;
+}
+.terminal-native :is(.post-tags, .post-meta, .article-meta) {
+  font-family: var(--mono);
+  gap: 1ch;
+  font-size: 1em;
+  flex-wrap: wrap;
+}
+.terminal-native
+  :is(
+    .hero-label,
+    .divider-label,
+    .live-dot,
+    .cursor,
+    .row-arrow,
+    .pane-header,
+    .shell-header,
+    .workspace-caption,
+    .workspace-bottom,
+    .statusbar,
+    .quick-actions,
+    .copy-code,
+    .comments > button
+  ) {
+  display: none !important;
+}
+.terminal-native svg:not(.diagram svg):not(.katex svg) {
+  display: none;
+}
+.terminal-native :is(.primary-button, .secondary-button, .text-link) {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  color: var(--blue);
+  display: inline;
+  font: inherit;
+}
+.terminal-native a {
+  color: var(--blue);
+  text-decoration: none;
+}
+.terminal-native a:focus-visible {
+  outline: 1px dashed var(--green);
+  outline-offset: 1px;
+}
+.terminal-native .article-header {
+  margin: 1em 0;
+}
+.terminal-native .article-summary {
+  border: 0;
+  padding: 0;
+  margin: 1em 0;
+}
+.terminal-native .prose {
+  max-width: none !important;
+  margin: 1em 0 !important;
+  font: inherit;
+  line-height: 1.5;
+}
+.terminal-native .prose h2 {
+  border: 0;
+  padding: 0;
+}
+.terminal-native .prose h2::before {
+  content: "## ";
+  color: var(--overlay);
+}
+.terminal-native .prose h3::before {
+  content: "### ";
+  color: var(--overlay);
+}
+.terminal-native .prose :is(blockquote, pre) {
+  margin: 1em 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  font: inherit;
+  overflow: auto;
+}
+.terminal-native .prose blockquote {
+  border-left: 1px solid var(--overlay);
+  padding-left: 1ch;
+}
+.terminal-native .prose :not(pre) > code {
+  font: inherit;
+  background: none;
+  color: var(--peach);
+  padding: 0;
+}
+.terminal-native .prose pre code {
+  font: inherit;
+}
+.terminal-native .prose th,
+.terminal-native .prose td {
+  font: inherit;
+  padding: 0.3em 1ch;
+  border-color: var(--overlay);
+  min-width: 0;
+  background: transparent;
+}
+.terminal-native .prose table {
+  font: inherit;
+}
+.terminal-native .toc {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+  max-width: none;
+  margin: 1em 0;
+}
+.terminal-native .toc :is(nav, summary, a) {
+  font: inherit;
+}
+.terminal-native .article :is(.reading-progress, .sidenote-rail) {
+  display: none;
+}
+.terminal-native .article[data-notes-enhanced] .prose section[data-footnotes] {
+  display: block;
+}
+.terminal-native .comments {
+  max-width: none;
+  margin: 1em 0;
+  border: 0;
+  padding: 0;
+}
+.terminal-native .search-field {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  margin: 1em 0;
+}
+.terminal-native .search-field:before {
+  content: "> ";
+  color: var(--green);
+}
+.terminal-native .search-field input {
+  font: inherit;
+}
+.terminal-native .terminal-whoami {
+  margin: 0 0 1em;
+}
+.shell-directory {
+  display: flex;
+  gap: 2ch;
+  color: var(--blue);
+  white-space: pre-wrap;
+}
+.shell-branch {
+  color: var(--green);
+}
+.terminal-prompt {
+  font: inherit;
+  margin: 0.7em 0 0;
+  padding: 0;
+}
+.terminal-prompt label {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+}
+.shell-chevron {
+  color: var(--green);
+}
+.terminal-prompt input {
+  color: var(--text);
+  font: inherit;
+  background: none;
+  border: 0;
+  outline: 0;
+  width: 100%;
+  caret-color: var(--text);
+  padding: 0;
+  min-width: 0;
+}
+.tmux-status {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  flex-shrink: 0;
+  height: 1.45em;
+  margin-top: 2px;
+  white-space: nowrap;
+  font: inherit;
+  overflow: hidden;
+  background: var(--base);
+}
+.tmux-session {
+  display: flex;
+  --module-color: var(--green);
+}
+.tmux-session.is-prefix {
+  --module-color: var(--red);
+}
+.power-cap {
+  color: var(--module-color);
+  background: transparent;
+  line-height: 1.45em;
+}
+.segment-icon {
+  color: var(--crust);
+  background: var(--module-color);
+  padding: 0 0.4ch;
+  line-height: 1.45em;
+}
+.segment-text {
+  color: var(--text);
+  background: var(--surface);
+  padding: 0 1ch;
+  line-height: 1.45em;
+}
+.end-cap {
+  color: var(--surface);
+}
+.tmux-windows {
+  display: flex;
+  align-items: center;
+  gap: 1ch;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.tmux-windows > span {
+  display: flex;
+  gap: 1ch;
+  background: var(--surface);
+  padding: 0 0.6ch;
+  border-radius: 0;
+  color: var(--muted);
+  line-height: 1.45em;
+}
+.tmux-windows .current {
+  color: var(--text);
+  background: var(--surface1);
+}
+.tmux-windows .window-index {
+  color: var(--mauve);
+}
+.tmux-modules {
+  display: flex;
+  gap: 0;
+  margin-left: auto;
+}
+.tmux-module {
+  display: flex;
+  align-items: center;
+  --module-color: var(--pink);
+}
+.host-module {
+  --module-color: #b4befe;
+}
+.time-module {
+  --module-color: var(--sky);
+}
+.tmux-message {
+  position: absolute;
+  bottom: calc(12px + 1.45em);
+  left: 12px;
+  right: 12px;
+  background: var(--green);
+  color: var(--crust);
+  padding: 0 1ch;
+  z-index: 12;
+  white-space: pre-wrap;
+  font: inherit;
+}
+.tmux-dialog {
+  position: fixed;
+  padding: 1ch;
+  border: 1px solid var(--overlay);
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--base);
+  color: var(--text);
+  font: inherit;
+  width: min(90vw, 110ch);
+  max-height: 85dvh;
+  line-height: 1.35;
+}
+.tmux-dialog::backdrop {
+  background: transparent;
+}
+.tmux-dialog :is(pre, p, div, label, input, form) {
+  font: inherit;
+  margin: 0;
+}
+.tmux-dialog pre {
+  white-space: pre-wrap;
+  overflow: auto;
+}
+.tmux-dialog input {
+  background: none;
+  color: var(--text);
+  border: 0;
+  border-bottom: 1px solid var(--overlay);
+  font: inherit;
+  outline: 0;
+  width: 70%;
+  caret-color: var(--text);
+}
+.tmux-popup-title {
+  color: var(--mauve);
+  margin-bottom: 1em !important;
+}
+.fzf-query {
+  display: flex;
+  gap: 1ch;
+  margin-bottom: 1em !important;
+}
+.tmux-options {
+  max-height: 60dvh;
+  overflow: auto;
+}
+.tmux-options > div {
+  display: flex;
+  gap: 1ch;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+.tmux-options > div > span:last-child {
+  color: var(--muted);
+  margin-left: 1ch;
+  word-break: break-all;
+}
+.tmux-options .selected {
+  background: var(--blue);
+  color: var(--crust);
+}
+.tmux-options .selected > span:last-child {
+  color: var(--crust);
+}
+.tmux-popup-hint {
+  color: var(--muted);
+  margin-top: 1em !important;
+}
+.terminal-copy {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: var(--base);
+  overflow: auto;
+  scrollbar-width: none;
+}
+.terminal-copy pre {
+  font: inherit;
+  white-space: pre-wrap;
+  padding: 0;
+  margin: 0;
+}
+.copy-indicator {
+  color: var(--crust);
+  background: var(--peach);
+  position: sticky;
+  top: 0;
+  margin-left: auto;
+  width: fit-content;
+}
+.copy-cursor {
+  color: var(--crust);
+  background: var(--text);
+}
+.copy-selected {
+  color: var(--crust);
+  background: var(--blue);
+}
+.terminal-fallback {
+  display: flex;
+  gap: 1ch;
+  font: inherit;
+}
+@media (max-width: 767px) {
+  .terminal-native {
+    height: 100dvh;
+    padding: 12px;
+    min-height: 0;
+  }
+  .terminal-native .workspace {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+  }
+  .terminal-native .pane {
+    display: flex;
+    min-height: 0;
+  }
+  .terminal-native .pane-body {
+    overflow: auto;
+    padding: 0;
+  }
+  .terminal-native .split {
+    display: flex;
+  }
+  .terminal-native .split-part {
+    display: flex;
+    flex-basis: 0;
+  }
+  .terminal-native .split-part:not(:has(.is-mobile-selected)) {
+    display: none;
+  }
+  .terminal-native .split-part:has(.is-mobile-selected) {
+    flex: 1;
+    flex-basis: 100% !important;
+  }
+  .terminal-native .resize-handle {
+    display: none;
+  }
+  .tmux-windows {
+    gap: 0.5ch;
+  }
+  .tmux-windows > span {
+    gap: 0.5ch;
+    padding: 0 0.3ch;
+  }
+  .tmux-modules {
+    display: none;
+  }
+  .tmux-status {
+    font-size: 0.75em;
+  }
+  .tmux-dialog {
+    width: calc(100vw - 24px);
+    font-size: 14px;
+  }
+}
+
+/* p10k uses 256-color indices, independently of tmux's Catppuccin modules. */
+.p10k-first-line {
+  display: flex;
+  align-items: baseline;
+  gap: 1ch;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  margin: 0 0 0.1em;
+}
+.p10k-directory {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.p10k-parent {
+  color: #0087af;
+}
+.p10k-anchor {
+  color: #00afff;
+  font-weight: 700 !important;
+}
+.p10k-git,
+.terminal-native .shell-chevron {
+  color: #5fd700;
+}
+.p10k-gap {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: pre;
+  color: #444444;
+}
+.p10k-time {
+  color: #5f8787;
+  flex-shrink: 0;
+}
+.terminal-native .terminal-usage {
+  color: var(--muted);
+}
+
+.terminal-native .shell-chevron.is-error {
+  color: #ff0000;
+}

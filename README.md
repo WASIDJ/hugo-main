@@ -2,7 +2,9 @@
 
 基于 Next.js App Router、React 和 TypeScript 的个人工作台。视觉与交互来自 [我的 tmux 配置](https://github.com/WASIDJ/.config/blob/main/tmux/tmux.conf)，保留 Obsidian Markdown → blog-content → GitHub Pages 的写作与发布流程。
 
-![桌面工作台](docs/preview/home-dark.png)
+![极简终端首页](docs/preview/terminal.png)
+
+界面直接按个人 `.config` 的 zsh、p10k、Ghostty 和 tmux 配置实现：ASCII 两行提示符、目录和 Git 状态、填充横线与时钟，底部 tmux 状态栏，全键盘操作。
 
 ## 开发与预览
 
@@ -24,28 +26,41 @@ npm run test:e2e    # 浏览器交互、响应式、无 JS、统计协议与可�
 npm run preview     # 在 3000 端口预览 out/，未知路径返回真正的 404
 ```
 
-macOS 浏览器测试使用已安装的 Google Chrome，Linux CI 使用 Playwright Chromium。预览服务器只绑定本机；可通过 `PORT=3001 npm run preview` 更改端口。预览不写入生产阅读统计，统计上报测试完全拦截请求。
+macOS 浏览器测试使用已安装的 Google Chrome，Linux CI 使用 Playwright Chromium。预览服务器只绑定本机；可通过 `PORT=3001 npm run preview` 更改端口。预览不写入生产阅读统计，统计接口沿用既有路径。
 
 ## 工作台操作
 
-桌面默认三个 pane：介绍、文章和项目。拖动分隔线调整尺寸，最多同时打开四个 pane。手机显示当前聚焦 pane；所有操作也可以从顶部键盘按钮进入。布局按页面在本地保存，关闭最后一个 pane 或点击“重置布局”恢复默认。
+默认关闭鼠标，通过 `Ctrl+q m` 开启或关闭 pane 鼠标操作。窗口和 session 分开管理；状态栏只显示文字与 Nerd Font glyph，没有网页工具栏或 pane 按钮。字体使用本地托管的 FiraCode Nerd Font Mono 子集，字号 18pt（浏览器计算值 24px），窗口内边距 12px。
 
-| 按键                   | 操作                          |
-| ---------------------- | ----------------------------- |
-| `Ctrl+q` 后 `1–5`      | 首页、文章、项目、关于、友链  |
-| 前缀后 `v / s`         | 左右 / 上下分屏并选择内容     |
-| 前缀后 `z / x`         | 放大还原 / 关闭 pane          |
-| 前缀后 `o / u / b / ?` | 链接 / 栏目 / 上一栏目 / 设置 |
-| `Alt+h/j/k/l`          | 方向切换焦点                  |
-| `Alt+Shift+h/j/k/l`    | 调整分屏比例                  |
-| `Alt+n/p`              | 下一个 / 上一个栏目           |
+| 按键                                  | 操作                                               |
+| ------------------------------------- | -------------------------------------------------- |
+| 前缀 `Ctrl+q` 后 `1–9`                | 选择当前 session 的 window                         |
+| 前缀后 `Ctrl+c / Ctrl+r`              | 新建 / 重命名 session                              |
+| 前缀后 `u / g / b / ) / (`            | session 列表 / 名称切换 / 上一个 / 下一个 / 前一个 |
+| 前缀后 `Q`                            | 关闭 session                                       |
+| 前缀后 `c / r / , / X`                | 新建 / 重命名 / 重命名 / 确认关闭 window           |
+| `Alt+n / Alt+p`                       | 下一个 / 上一个 window                             |
+| 前缀后 `v / s`                        | 左右 / 上下分屏，新的 pane 显示本地博客命令提示符  |
+| `Alt+h/j/k/l`                         | 方向切换 pane                                      |
+| `Alt+Shift+h/j/k/l`                   | 调整 pane 尺寸                                     |
+| 前缀后 `z / x / m`                    | 放大还原 / 关闭 pane / 切换鼠标                    |
+| 前缀后 `Enter`，随后 `v`、方向键、`y` | vi 复制模式、选择、复制                            |
+| 前缀后 `o / w / ?`                    | URL 列表 / window 列表 / 帮助                      |
+| `Alt+v / Alt+s / Alt+z / Alt+=`       | Ghostty 对应的分屏 / 放大 / 等分                   |
+| `/`                                   | 打开页面选择器；选择器里用 `/` 进入筛选输入        |
 
-前缀有效期两秒，`Esc` 取消。系统或浏览器可能占用组合键，可在设置中重新绑定前缀或关闭快捷键。输入框内不接管快捷键。分隔线可聚焦后用方向键调整。
+p10k 按仓库使用 256 色 ANSI 色值、ASCII `>` 成功提示符和红色错误提示符；第一行目录、Git、`-` 填充、`HH:mm:ss` 时间，第二行输入命令。默认 Catppuccin Mocha，终端主题不继承旧版网页主题偏好。
+
+前缀持续等待操作键，`Esc` 取消；单独按下 Ctrl、Alt、Shift 不消耗前缀。当前浏览器版命令只浏览博客：`whoami`、`posts`、`projects`、`about`、`links`、`open <path|number>`、`cat <slug>`、`search <words>`、`theme dark|light`、`font <size>`、`comments`、`clear`。`bind a` 可将前缀改为 Ctrl+A；这不执行系统 shell。
+
+持久化保存 session、window、pane 布局和用户命名。新版本使用独立的 v2 状态，避免继续恢复旧版的三卡片布局。鼠标模式每次加载默认关闭。
+
+原配置中的私人 Codex 周额度脚本不在公共网页运行；`Ctrl+q Ctrl+u` 显示当前网页 session/pane 状态。真实 Mac mini 终端区域是用户之后实现的独立功能，设计分析见 [Mac mini 终端方案](docs/mac-mini-terminal-plan.md)。
 
 ## 内容与检索
 
 - 支持现有 YAML frontmatter、中文文件名、`slug`、`url`、`aliases`、分类和标签。
-- Markdown 通过 remark / rehype 编译，支持 GFM、数学公式、代码高亮、Mermaid、callout、脚注和宽屏边注。原始 HTML 经过清理；未知 Hugo shortcode 会报告，CI 阻止带此类问题的内容上线。
+- Markdown 通过 remark / rehype 编译，支持 GFM、数学公式、代码高亮、Mermaid、callout、脚注。原始 HTML 经过清理；未知 Hugo shortcode 会报告，CI 阻止带此类问题的内容上线。
 - 首标题与 frontmatter 标题相同时只展示一次，保留正文标题的片段锚点。
 - 页面生成完整 HTML，关闭 JavaScript 后正文与栏目导航仍可阅读。全文搜索、分屏、图表增强和评论需要 JavaScript。
 - 全文搜索索引按需加载；RSS 为 `/index.xml`，保留旧栏目 feed。不存在的链接返回 404。

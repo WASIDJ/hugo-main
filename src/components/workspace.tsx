@@ -7,28 +7,23 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import Link from "./link";
+import { useTmux } from "./tmux-provider";
+import { P10kHeader } from "./p10k-prompt";
 import {
-  Terminal,
-  Search,
-  Sun,
-  Moon,
-  Settings,
-  Maximize2,
-  Minimize2,
-  X,
-  SplitSquareHorizontal,
-  SplitSquareVertical,
-  ArrowUpRight,
-  Keyboard,
-  RotateCcw,
-  BookOpen,
-  GitBranch,
-  User,
-  Link as LinkIcon,
-  House,
-} from "lucide-react";
-import type { Catalog, Page } from "@/lib/types";
+  enterCopyMode,
+  moveCopyCursor,
+  toggleCopySelection,
+  selectedCopyText,
+  type CopyBuffer,
+} from "@/lib/copy-mode";
+import {
+  sessionOf,
+  windowOf,
+  normalizePath,
+  pageName,
+  sections,
+  type TmuxAction,
+} from "@/lib/tmux";
 import {
   type Tree,
   type Leaf,
@@ -39,211 +34,245 @@ import {
   resize,
   resizeParent,
   replace,
-  defaultTree,
-  validTree,
 } from "@/lib/workspace";
-import { PaneSummary } from "./views";
+import type { Catalog, Page } from "@/lib/types";
+import {
+  Intro,
+  PostList,
+  Projects,
+  About,
+  Friends,
+  Archives,
+  Taxonomy,
+} from "./views";
 import { Article } from "./article";
-const windows = [
-  { path: "/", label: "首页", name: "home", Icon: House },
-  { path: "/post/", label: "文章", name: "journal", Icon: BookOpen },
-  { path: "/page/projects/", label: "项目", name: "projects", Icon: GitBranch },
-  { path: "/page/关于/", label: "关于", name: "about", Icon: User },
-  { path: "/page/友链/", label: "友链", name: "links", Icon: LinkIcon },
-];
-const getStorage = (key: string) => {
+import { Search } from "./search";
+
+type PickerRow = {
+  id: string;
+  label: string;
+  detail: string;
+  activate: () => void;
+  remove?: () => void;
+};
+type Overlay =
+  | { type: "picker"; title: string; rows: PickerRow[] }
+  | {
+      type: "prompt";
+      title: string;
+      initial: string;
+      submit: (value: string) => void;
+    }
+  | { type: "confirm"; title: string; accept: () => void }
+  | { type: "help" }
+  | { type: "status" };
+const keyOf = (e: KeyboardEvent) =>
+  e.altKey && /^Key[A-Z]$/.test(e.code)
+    ? e.code.slice(3).toLowerCase()
+    : e.key.toLowerCase();
+const editable = (el: EventTarget | null) =>
+  el instanceof HTMLElement &&
+  !!el.closest("input,textarea,select,[contenteditable=true]");
+const read = (key: string) => {
   try {
     return localStorage.getItem(key);
   } catch {
     return null;
   }
 };
-const setStorage = (key: string, value: string) => {
+const save = (key: string, value: string) => {
   try {
     localStorage.setItem(key, value);
-  } catch {
-    /* Optional preferences only. */
-  }
+  } catch {}
 };
-const editable = (el: EventTarget | null) =>
-  el instanceof HTMLElement &&
-  !!el.closest('input,textarea,select,[contenteditable="true"]');
-type Chord = {
-  key: string;
-  ctrl: boolean;
-  alt: boolean;
-  meta: boolean;
-  shift: boolean;
-};
-const defaultPrefix: Chord = {
-  key: "q",
-  ctrl: true,
-  alt: false,
-  meta: false,
-  shift: false,
-};
-const eventKey = (e: KeyboardEvent) =>
-  e.altKey && /^Key[A-Z]$/.test(e.code)
-    ? e.code.slice(3).toLowerCase()
-    : e.key.toLowerCase();
-const matches = (e: KeyboardEvent, c: Chord) =>
-  eventKey(e) === c.key &&
-  e.ctrlKey === c.ctrl &&
-  e.altKey === c.alt &&
-  e.metaKey === c.meta &&
-  e.shiftKey === c.shift;
-const chordLabel = (c: Chord) =>
-  [
-    c.ctrl ? "Ctrl" : null,
-    c.alt ? "Alt" : null,
-    c.meta ? "Cmd" : null,
-    c.shift ? "Shift" : null,
-    c.key.toUpperCase(),
-  ]
-    .filter(Boolean)
-    .join("+");
-const helpRows = [
-  ["1–5", "切换栏目窗口"],
-  ["v / s", "左右 / 上下分屏"],
-  ["z", "放大 / 还原 pane"],
-  ["x", "关闭 pane"],
-  ["o", "当前内容链接"],
-  ["u", "栏目选择器"],
-  ["b", "上一栏目"],
-  ["?", "快捷键与设置"],
-];
-function RemoteContent({ id, paneKey }: { id: string; paneKey: string }) {
+
+function RemotePage({ path, catalog }: { path: string; catalog: Catalog }) {
+  const route = catalog.routes[path];
+  const canonical = route?.target || path;
+  const actual = catalog.routes[canonical];
   const [page, setPage] = useState<Page | null>(null),
-    [failed, setFailed] = useState(false);
+    [error, setError] = useState(false);
+  const metadata = catalog.pages.find((p) => p.path === canonical);
   useEffect(() => {
-    const controller = new AbortController();
     setPage(null);
-    setFailed(false);
-    fetch(`/panes/${paneKey}.json`, {
-      signal: controller.signal,
-    })
+    setError(false);
+    if (!metadata || !["article", "page"].includes(actual?.kind)) return;
+    const controller = new AbortController();
+    fetch(`/panes/${metadata.paneKey}.json`, { signal: controller.signal })
       .then((r) => {
-        if (!r.ok) throw new Error("content");
+        if (!r.ok) throw new Error("load");
         return r.json();
       })
       .then(setPage)
       .catch((e) => {
-        if (e.name !== "AbortError") setFailed(true);
+        if (e.name !== "AbortError") setError(true);
       });
     return () => controller.abort();
-  }, [id, paneKey]);
-  return page ? (
-    <Article page={page} track={false} />
-  ) : (
-    <div className="loading-content" role="status">
-      {failed ? (
-        <>
-          <p>内容暂时无法加载。</p>
-          <Link href={id}>
-            打开完整页面 <ArrowUpRight size={14} />
-          </Link>
-        </>
-      ) : (
-        <p>正在打开文章…</p>
-      )}
-    </div>
+  }, [canonical, metadata?.paneKey, actual?.kind]);
+  if (canonical === "/") return <Intro />;
+  if (actual?.kind === "projects")
+    return <Projects projects={catalog.projects} />;
+  if (actual?.kind === "about") return <About />;
+  if (actual?.kind === "friends") return <Friends friends={catalog.friends} />;
+  if (actual?.kind === "archives") return <Archives posts={catalog.posts} />;
+  if (actual?.kind === "search") return <Search />;
+  if (actual?.kind === "taxonomy")
+    return <Taxonomy posts={catalog.posts} type={actual.taxonomy!} />;
+  if (actual?.kind === "posts")
+    return (
+      <PostList
+        posts={
+          actual.term
+            ? catalog.posts.filter((p) =>
+                p[actual.taxonomy!].includes(actual.term!),
+              )
+            : catalog.posts
+        }
+        title={actual.title}
+      />
+    );
+  if (page) return <Article page={page} track={false} />;
+  return (
+    <p role="status">
+      {error ? "cat: 内容加载失败；用 open 命令重新打开此路径。" : "loading…"}
+    </p>
   );
 }
+function ShellInput({
+  path,
+  active,
+  execute,
+}: {
+  path: string;
+  active: boolean;
+  execute: (command: string) => void | boolean;
+}) {
+  const [command, setCommand] = useState("");
+  const [revision, setRevision] = useState(0);
+  const [failed, setFailed] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (active) input.current?.focus({ preventScroll: true });
+  }, [active]);
+  return (
+    <form
+      className="terminal-prompt"
+      onSubmit={(e) => {
+        e.preventDefault();
+        setFailed(execute(command) === false);
+        setCommand("");
+        setRevision((value) => value + 1);
+      }}
+    >
+      <P10kHeader path={path} revision={revision} />
+      <label>
+        <span className={`shell-chevron ${failed ? "is-error" : ""}`}>
+          &gt;
+        </span>
+        <span className="sr-only">终端命令</span>
+        <input
+          ref={input}
+          value={command}
+          onChange={(e) => setCommand(e.target.value)}
+          autoComplete="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          aria-label="终端命令"
+        />
+      </label>
+    </form>
+  );
+}
+const help = `prefix = Ctrl+q
+
+SESSION
+  prefix Ctrl+c    new-session
+  prefix u         choose-session (j/k, Enter, x)
+  prefix g         switch-session prompt
+  prefix ) / (     next / previous session
+  prefix Ctrl+r    rename-session
+  prefix b         last-session
+  prefix Q         kill-session
+
+WINDOW
+  prefix c         new-window
+  prefix 1–9       select-window
+  Alt+n / Alt+p    next / previous window
+  prefix r / ,     rename-window
+  prefix X         kill-window (y/n)
+  prefix w         choose-window
+
+PANE
+  prefix v / s     split right / down
+  Alt+h/j/k/l      select pane
+  Alt+Shift+hjkl   resize pane
+  prefix x         kill-pane
+  prefix z         zoom / restore
+  prefix m         toggle mouse (default: off)
+  Alt+v / s / z    Ghostty split / zoom
+  Alt+=            equalize splits
+
+COPY / LINKS
+  prefix Enter     copy-mode
+  h/j/k/l          move cursor / scroll
+  v                begin selection
+  y                copy selection and exit
+  prefix o         fzf URLs (type, arrows, Enter)
+  prefix ?         this help
+
+COMMANDS
+  whoami · ls · posts · projects · about · links
+  open <path|number> · cat <slug> · search <words>
+  theme dark|light · font <size> · comments · clear
+
+Esc / q closes this overlay.`;
 export function Workspace({
   children,
   catalog,
-  home = false,
-  title = "workspace",
   canonical = "/",
+  title = "zsh",
 }: {
   children: ReactNode;
   catalog: Catalog;
-  home?: boolean;
-  title?: string;
   canonical?: string;
+  title?: string;
+  home?: boolean;
 }) {
+  const { state, dispatch, ready } = useTmux();
   const router = useRouter(),
     pathname = usePathname();
-  const [tree, setTree] = useState<Tree>(() => defaultTree(home));
-  const [focus, setFocus] = useState("main"),
-    [zoom, setZoom] = useState<string | null>(null);
-  const [theme, setTheme] = useState("dark"),
-    [enabled, setEnabled] = useState(true),
-    [prefix, setPrefix] = useState<Chord>(defaultPrefix),
-    [armed, setArmed] = useState(false),
-    [recording, setRecording] = useState(false),
-    [restored, setRestored] = useState(false);
-  const [modal, setModal] = useState<
-      null | "settings" | "windows" | "content" | "links"
-    >(null),
-    [splitAxis, setSplitAxis] = useState<Axis | null>(null),
-    [notice, setNotice] = useState(""),
+  const session = sessionOf(state),
+    win = windowOf(state);
+  const tree = win.tree,
+    focus = win.focus,
+    zoom = win.zoom;
+  const [armed, setArmed] = useState(false),
+    [overlay, setOverlay] = useState<Overlay | null>(null),
+    [query, setQuery] = useState(""),
+    [selected, setSelected] = useState(0),
     [clock, setClock] = useState("--:--"),
-    [modalQuery, setModalQuery] = useState("");
-  const dialog = useRef<HTMLDialogElement>(null),
-    surface = useRef<HTMLDivElement>(null),
-    previousPath = useRef("/"),
-    timer = useRef<ReturnType<typeof setTimeout> | null>(null),
-    counter = useRef(0),
-    wasRestored = useRef(false);
-  const allowed = new Set([
-    "main",
-    "intro",
-    "articles",
-    "projects",
-    ...catalog.posts.map((p) => p.path),
-  ]);
-  const active =
-    canonical === "/"
-      ? 0
-      : canonical.startsWith("/post/") ||
-          canonical.startsWith("/tags/") ||
-          canonical.startsWith("/categories/")
-        ? 1
-        : canonical.includes("projects")
-          ? 2
-          : canonical.includes("友链")
-            ? 4
-            : 3;
-  const persistKey = `ryou-workspace:v1:${canonical}`;
+    [notice, setNotice] = useState(""),
+    [theme, setTheme] = useState("dark"),
+    [fontSize, setFontSize] = useState(18),
+    [prefix, setPrefix] = useState("q");
+  const [copy, setCopy] = useState<CopyBuffer | null>(null);
+  const surface = useRef<HTMLElement>(null),
+    dialog = useRef<HTMLDialogElement>(null),
+    promptInput = useRef<HTMLInputElement>(null),
+    copyPre = useRef<HTMLPreElement>(null),
+    windowNav = useRef<HTMLElement>(null),
+    serial = useRef(0),
+    interaction = useRef<"keyboard" | "pointer">("keyboard");
   useEffect(() => {
-    try {
-      const saved = getStorage(persistKey);
-      if (saved) {
-        const value = JSON.parse(saved);
-        if (validTree(value.tree, allowed)) {
-          setTree(value.tree);
-          setFocus(
-            leaves(value.tree).some((l) => l.id === value.focus)
-              ? value.focus
-              : leaves(value.tree)[0].id,
-          );
-          if (value.zoom && leaves(value.tree).some((l) => l.id === value.zoom))
-            setZoom(value.zoom);
-        }
-      }
-    } catch {
-      /* Ignore stale or corrupt layouts. */
-    }
-    wasRestored.current = true;
-    setRestored(true);
-    const savedTheme = getStorage("ryou-theme");
-    if (savedTheme === "light") setTheme("light");
-    setEnabled(getStorage("ryou-keys") !== "off");
-    try {
-      const saved = JSON.parse(getStorage("ryou-prefix") || "null");
-      if (
-        saved &&
-        typeof saved.key === "string" &&
-        saved.key.length === 1 &&
-        ["ctrl", "alt", "meta", "shift"].every(
-          (k) => typeof saved[k] === "boolean",
-        )
-      )
-        setPrefix(saved);
-    } catch {
-      /* Use tmux default. */
-    }
+    if (ready) dispatch({ type: "path", path: normalizePath(pathname) });
+  }, [pathname, ready, dispatch]);
+  useEffect(() => {
+    const t = read("ryou-terminal-theme");
+    if (t === "light") setTheme("light");
+    const size = Number(read("ryou-terminal-font"));
+    if (size >= 10 && size <= 30) setFontSize(size);
+    const p = read("ryou-terminal-prefix");
+    if (p?.length === 1) setPrefix(p);
     const tick = () =>
       setClock(
         new Intl.DateTimeFormat("en-GB", {
@@ -253,337 +282,730 @@ export function Workspace({
         }).format(new Date()),
       );
     tick();
-    const interval = setInterval(tick, 60000);
-    return () => {
-      clearInterval(interval);
-      if (timer.current) clearTimeout(timer.current);
-    };
-    // Each route owns its layout and is remounted by the server view.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [persistKey]);
+    const id = setInterval(tick, 60000);
+    return () => clearInterval(id);
+  }, []);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    if (restored) setStorage("ryou-theme", theme);
-  }, [theme, restored]);
+    if (ready) save("ryou-terminal-theme", theme);
+  }, [theme, ready]);
   useEffect(() => {
-    if (wasRestored.current)
-      setStorage(persistKey, JSON.stringify({ tree, focus, zoom }));
-  }, [tree, focus, zoom, persistKey]);
+    if (ready) save("ryou-terminal-font", String(fontSize));
+  }, [fontSize, ready]);
   useEffect(() => {
-    if (modal) {
-      setModalQuery("");
+    if (overlay) {
+      setQuery(overlay.type === "prompt" ? overlay.initial : "");
+      setSelected(0);
       dialog.current?.showModal();
+      if (overlay.type === "prompt") promptInput.current?.focus();
+      else dialog.current?.focus();
     } else dialog.current?.close();
-  }, [modal]);
-  const notify = useCallback((message: string) => setNotice(message), []);
-  const focusPane = useCallback((id: string) => {
-    setFocus(id);
-    surface.current
-      ?.querySelector<HTMLElement>(`[data-pane="${id}"]`)
-      ?.focus({ preventScroll: true });
-  }, []);
-  const navigate = useCallback(
-    (path: string) => {
-      previousPath.current = pathname;
-      setStorage("ryou-previous-window", pathname);
-      router.push(path);
-      setModal(null);
+  }, [overlay]);
+  const change = useCallback(
+    (action: TmuxAction, navigate = true) => {
+      dispatch(action);
+      if (navigate) {
+        // Reducer owns the target; route synchronization runs after state commit.
+        setPendingNavigation(true);
+      }
     },
-    [pathname, router],
+    [dispatch],
   );
-  const startSplit = useCallback(
-    (axis: Axis) => {
-      if (leaves(tree).length >= 4) {
-        notify("最多同时打开 4 个 pane。");
+  const [pendingNavigation, setPendingNavigation] = useState(false);
+  useEffect(() => {
+    if (pendingNavigation) {
+      setPendingNavigation(false);
+      const path = windowOf(state).path;
+      if (normalizePath(pathname) !== path) router.push(path);
+    }
+  }, [state, pendingNavigation, pathname, router]);
+  const setPane = useCallback(
+    (update: Extract<TmuxAction, { type: "pane" }>) => dispatch(update),
+    [dispatch],
+  );
+  const selectPane = useCallback(
+    (id: string) => {
+      interaction.current = "keyboard";
+      dispatch({ type: "pane", focus: id });
+      requestAnimationFrame(() =>
+        surface.current
+          ?.querySelector<HTMLElement>(`[data-pane="${id}"]`)
+          ?.focus({ preventScroll: true }),
+      );
+    },
+    [dispatch],
+  );
+  const open = useCallback(
+    (path: string) => {
+      const clean = normalizePath(path);
+      if (!catalog.routes[clean]) {
+        setNotice(`open: no such page: ${path}`);
         return;
       }
-      setSplitAxis(axis);
-      setModal("content");
+      dispatch({ type: "navigate-pane", path: clean });
+      router.push(clean);
+      setOverlay(null);
     },
-    [tree, notify],
+    [catalog, dispatch, focus, tree, router],
   );
-  const chooseContent = (content: string) => {
-    if (splitAxis) {
-      const id = `pane-${Date.now()}-${counter.current++}`;
-      setTree((t) => split(t, focus, splitAxis, id, content));
-      setFocus(id);
-      setZoom(null);
-    } else {
-      const target = leaves(tree).find((l) => l.id === focus);
-      if (target && target.content !== "main")
-        setTree((t) => replace(t, focus, { ...target, content }));
-    }
-    setModal(null);
-    setSplitAxis(null);
-  };
+  const picker = useCallback(
+    (mode: "sessions" | "windows" | "urls" | "pages") => {
+      let rows: PickerRow[] = [];
+      if (mode === "sessions")
+        rows = state.sessions.map((s, i) => ({
+          id: s.id,
+          label: `${i}: ${s.name}`,
+          detail: `${s.windows.length} windows${s.id === session.id ? " (attached)" : ""}`,
+          activate: () => change({ type: "session", id: s.id }),
+          remove: () => change({ type: "close-session", id: s.id }),
+        }));
+      if (mode === "windows")
+        rows = session.windows.map((w, i) => ({
+          id: w.id,
+          label: `${i + 1}: ${w.name}${w.id === win.id ? "*" : ""}`,
+          detail: w.path,
+          activate: () => change({ type: "window", id: w.id }),
+        }));
+      if (mode === "pages")
+        rows = [
+          ...sections.map((s) => ({
+            id: s.path,
+            label: s.name,
+            detail: s.path,
+            activate: () => open(s.path),
+          })),
+          ...catalog.posts.map((p) => ({
+            id: p.path,
+            label: p.title,
+            detail: p.path,
+            activate: () => open(p.path),
+          })),
+        ];
+      if (mode === "urls") {
+        const pane = surface.current?.querySelector<HTMLElement>(
+          `[data-pane="${focus}"]`,
+        );
+        const urls = [
+          ...(pane?.querySelectorAll<HTMLAnchorElement>("a[href]") || []),
+        ].map((a) => ({
+          id: a.href,
+          label: a.textContent?.trim() || a.href,
+          detail: a.href,
+          activate: () => {
+            const url = new URL(a.href);
+            if (url.origin === location.origin) {
+              if (url.pathname === location.pathname && url.hash) {
+                pane
+                  ?.querySelector(
+                    `[id="${CSS.escape(decodeURIComponent(url.hash.slice(1)))}"]`,
+                  )
+                  ?.scrollIntoView();
+                return;
+              }
+              if (catalog.routes[normalizePath(url.pathname)]) {
+                open(url.pathname);
+                return;
+              }
+            }
+            if (["http:", "https:", "mailto:"].includes(url.protocol))
+              location.assign(url.href);
+          },
+        }));
+        rows = urls.filter(
+          (r, i) => urls.findIndex((u) => u.id === r.id) === i,
+        );
+      }
+      setOverlay({
+        type: "picker",
+        title:
+          mode === "urls"
+            ? "fzf-url"
+            : mode === "sessions"
+              ? "choose-session"
+              : mode === "windows"
+                ? "choose-window"
+                : "open page",
+        rows,
+      });
+    },
+    [state, session, win, focus, catalog, change, open],
+  );
+  const splitPane = useCallback(
+    (axis: Axis) => {
+      const pane = surface.current?.querySelector<HTMLElement>(
+        `[data-pane="${focus}"]`,
+      );
+      const rect = pane?.getBoundingClientRect();
+      if (
+        (axis === "x" && (rect?.width || 0) < fontSize * 24) ||
+        (axis === "y" && (rect?.height || 0) < fontSize * 10)
+      ) {
+        setNotice("create pane failed: pane too small");
+        return;
+      }
+      if (leaves(tree).length >= 32) {
+        setNotice("create pane failed: pane limit");
+        return;
+      }
+      const id = `pane-${Date.now()}-${serial.current++}`;
+      setPane({
+        type: "pane",
+        tree: split(tree, focus, axis, id, "shell"),
+        focus: id,
+        zoom: null,
+      });
+    },
+    [focus, tree, fontSize, setPane],
+  );
   const closePane = useCallback(() => {
     const next = remove(tree, focus);
-    if (!next) {
-      setTree(defaultTree(home));
-      setFocus("main");
-      setZoom(null);
-      notify("已恢复当前栏目的默认布局。");
-      return;
-    }
-    setTree(next);
-    setFocus(leaves(next)[0].id);
-    setZoom(null);
-  }, [tree, focus, home, notify]);
+    if (next)
+      setPane({
+        type: "pane",
+        tree: next,
+        focus: leaves(next)[0].id,
+        zoom: null,
+      });
+    else change({ type: "close-window" });
+  }, [tree, focus, setPane, change]);
   const move = useCallback(
-    (direction: string) => {
-      const elements = [
+    (key: string) => {
+      const panes = [
         ...(surface.current?.querySelectorAll<HTMLElement>("[data-pane]") ||
           []),
       ];
-      const current = elements.find((e) => e.dataset.pane === focus);
+      const current = panes.find((p) => p.dataset.pane === focus);
       if (!current) return;
       const r = current.getBoundingClientRect(),
         x = r.left + r.width / 2,
         y = r.top + r.height / 2;
-      const candidates = elements
-        .filter((e) => e !== current)
-        .map((e) => {
-          const rect = e.getBoundingClientRect();
+      const candidates = panes
+        .filter((p) => p !== current)
+        .map((p) => {
+          const q = p.getBoundingClientRect();
           return {
-            id: e.dataset.pane!,
-            x: rect.left + rect.width / 2,
-            y: rect.top + rect.height / 2,
+            id: p.dataset.pane!,
+            x: q.left + q.width / 2,
+            y: q.top + q.height / 2,
           };
         })
         .filter((p) =>
-          direction === "h"
+          key === "h"
             ? p.x < x
-            : direction === "l"
+            : key === "l"
               ? p.x > x
-              : direction === "k"
-                ? p.y < y
-                : p.y > y,
+              : key === "j"
+                ? p.y > y
+                : p.y < y,
         )
         .sort(
           (a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y),
         );
-      if (candidates[0]) focusPane(candidates[0].id);
+      if (candidates[0]) selectPane(candidates[0].id);
     },
-    [focus, focusPane],
+    [focus, selectPane],
   );
+  const execute = useCallback(
+    (input: string) => {
+      const [command, ...rest] = input.trim().split(/\s+/);
+      const arg = rest.join(" ");
+      if (!command) return;
+      if (command === "help") {
+        setOverlay({ type: "help" });
+        return;
+      }
+      if (["whoami", "home"].includes(command)) {
+        open("/");
+        return;
+      }
+      const paths: Record<string, string> = {
+        ls: "/post/",
+        posts: "/post/",
+        projects: "/page/projects/",
+        about: "/page/关于/",
+        links: "/page/友链/",
+        archives: "/page/archives/",
+      };
+      if (paths[command]) {
+        open(paths[command]);
+        return;
+      }
+      if (command === "open" || command === "cat") {
+        const target = /^\d+$/.test(arg)
+          ? catalog.posts[Number(arg) - 1]?.path
+          : catalog.pages.find(
+              (p) =>
+                p.path === normalizePath(arg) ||
+                p.path.split("/").filter(Boolean).at(-1) === arg,
+            )?.path;
+        if (target) {
+          open(target);
+          return;
+        }
+        setNotice(`cat: no such page: ${arg}`);
+        return false;
+      }
+      if (command === "search") {
+        open("/page/search/");
+        if (arg) router.push(`/page/search/?q=${encodeURIComponent(arg)}`);
+        return;
+      }
+      if (command === "theme" && ["dark", "light"].includes(arg)) {
+        setTheme(arg);
+        return;
+      }
+      if (command === "font" && Number(arg) >= 10 && Number(arg) <= 30) {
+        setFontSize(Number(arg));
+        return;
+      }
+      if (command === "bind" && /^[a-z]$/i.test(arg)) {
+        setPrefix(arg.toLowerCase());
+        save("ryou-terminal-prefix", arg.toLowerCase());
+        setNotice(`prefix: Ctrl+${arg.toUpperCase()}`);
+        return;
+      }
+      if (command === "comments") {
+        surface.current
+          ?.querySelector(`[data-pane="${focus}"] .article`)
+          ?.dispatchEvent(new CustomEvent("tmux:comments", { bubbles: true }));
+        return;
+      }
+      if (command === "clear") {
+        setPane({
+          type: "pane",
+          tree: replace(tree, focus, {
+            kind: "leaf",
+            id: focus,
+            content: "shell",
+          }),
+        });
+        return;
+      }
+      if (command === "pwd") {
+        setNotice(win.path);
+        return;
+      }
+      setNotice(`zsh: command not found: ${command}`);
+      return false;
+    },
+    [open, catalog, focus, tree, win.path, setPane],
+  );
+  const filtered =
+    overlay?.type === "picker"
+      ? overlay.rows.filter((r) =>
+          `${r.label} ${r.detail}`.toLowerCase().includes(query.toLowerCase()),
+        )
+      : [];
+  useEffect(() => {
+    setSelected((i) => Math.min(i, Math.max(0, filtered.length - 1)));
+  }, [filtered.length]);
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
-      if (recording) {
-        e.preventDefault();
-        if (e.key === "Escape") {
-          setRecording(false);
+      interaction.current = "keyboard";
+      if (["Control", "Shift", "Alt", "Meta"].includes(e.key) || e.isComposing)
+        return;
+      if (overlay) {
+        if (e.key === "Escape" || (e.key === "q" && !editable(e.target))) {
+          e.preventDefault();
+          setOverlay(null);
           return;
         }
-        if (["Control", "Shift", "Alt", "Meta"].includes(e.key)) return;
-        if (e.key.length !== 1 || !(e.ctrlKey || e.altKey || e.metaKey)) {
-          notify("请使用带 Ctrl、Alt 或 Cmd 的字母组合。");
+        if (overlay.type === "confirm") {
+          if (e.key.toLowerCase() === "y") {
+            e.preventDefault();
+            overlay.accept();
+            setOverlay(null);
+          } else if (e.key.toLowerCase() === "n") {
+            e.preventDefault();
+            setOverlay(null);
+          }
           return;
         }
-        const next = {
-          key: eventKey(e),
-          ctrl: e.ctrlKey,
-          alt: e.altKey,
-          meta: e.metaKey,
-          shift: e.shiftKey,
-        };
-        setPrefix(next);
-        setStorage("ryou-prefix", JSON.stringify(next));
-        setRecording(false);
+        if (overlay.type === "prompt") {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            overlay.submit(query);
+            setOverlay(null);
+          }
+          return;
+        }
+        if (overlay.type === "picker") {
+          if (
+            ["ArrowDown", "ArrowUp"].includes(e.key) ||
+            (e.ctrlKey && ["j", "k", "n", "p"].includes(keyOf(e))) ||
+            (!editable(e.target) && ["j", "k"].includes(e.key))
+          ) {
+            e.preventDefault();
+            const delta =
+              ["ArrowDown", "j", "n"].includes(e.key) ||
+              ["j", "n"].includes(keyOf(e))
+                ? 1
+                : -1;
+            setSelected(
+              (i) =>
+                (i + delta + Math.max(filtered.length, 1)) %
+                Math.max(filtered.length, 1),
+            );
+            return;
+          }
+          if (e.key === "Enter") {
+            e.preventDefault();
+            filtered[selected]?.activate();
+            setOverlay(null);
+            return;
+          }
+          if (
+            !editable(e.target) &&
+            e.key === "x" &&
+            overlay.title === "choose-session"
+          ) {
+            e.preventDefault();
+            filtered[selected]?.remove?.();
+            setOverlay(null);
+            return;
+          }
+          if (e.key === "/" && !editable(e.target)) {
+            e.preventDefault();
+            promptInput.current?.focus();
+            return;
+          }
+        }
         return;
       }
-      if (e.key === "Escape") {
-        setArmed(false);
-        if (modal) setModal(null);
+      if (copy) {
+        if (e.key === "Escape" || e.key === "q") {
+          e.preventDefault();
+          setCopy(null);
+          return;
+        }
+        if (e.key === "v") {
+          e.preventDefault();
+          setCopy((c) => (c ? toggleCopySelection(c) : c));
+          return;
+        }
+        if (
+          [
+            "h",
+            "j",
+            "k",
+            "l",
+            "ArrowLeft",
+            "ArrowRight",
+            "ArrowUp",
+            "ArrowDown",
+          ].includes(e.key)
+        ) {
+          e.preventDefault();
+          const direction =
+            (
+              {
+                ArrowLeft: "h",
+                ArrowDown: "j",
+                ArrowUp: "k",
+                ArrowRight: "l",
+              } as Record<string, "h" | "j" | "k" | "l">
+            )[e.key] || (e.key as "h" | "j" | "k" | "l");
+          setCopy((c) => (c ? moveCopyCursor(c, direction) : c));
+          return;
+        }
+        if (e.key === "y") {
+          e.preventDefault();
+          void navigator.clipboard
+            .writeText(selectedCopyText(copy))
+            .then(() => {
+              setCopy(null);
+              setNotice("copied");
+            })
+            .catch(() =>
+              setNotice(
+                "clipboard unavailable: select and copy with browser keys",
+              ),
+            );
+          return;
+        }
         return;
       }
-      if (!enabled || modal || editable(e.target)) return;
-      if (matches(e, prefix)) {
+      if (e.ctrlKey && !e.altKey && !e.metaKey && keyOf(e) === prefix) {
         e.preventDefault();
-        setArmed(true);
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => setArmed(false), 2000);
+        if (armed) {
+          setArmed(false);
+          setNotice("^Q");
+        } else setArmed(true);
         return;
       }
       if (armed) {
         e.preventDefault();
         setArmed(false);
-        if (timer.current) clearTimeout(timer.current);
-        const key = eventKey(e);
-        if (/^[1-5]$/.test(key)) navigate(windows[Number(key) - 1].path);
-        else if (key === "v") startSplit("x");
-        else if (key === "s") startSplit("y");
-        else if (key === "z") setZoom((z) => (z ? null : focus));
-        else if (key === "x") closePane();
-        else if (key === "o") setModal("links");
-        else if (key === "u") setModal("windows");
-        else if (key === "b")
-          navigate(getStorage("ryou-previous-window") || previousPath.current);
-        else if (key === "?") setModal("settings");
-        return;
-      }
-      if (
-        e.altKey &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        !e.shiftKey &&
-        ["n", "p"].includes(eventKey(e))
-      ) {
-        e.preventDefault();
-        navigate(windows[(active + (eventKey(e) === "n" ? 1 : 4)) % 5].path);
-        return;
-      }
-      if (
-        e.altKey &&
-        !e.ctrlKey &&
-        !e.metaKey &&
-        ["h", "j", "k", "l"].includes(eventKey(e))
-      ) {
-        e.preventDefault();
-        const key = eventKey(e);
-        if (e.shiftKey) {
-          const axis = key === "h" || key === "l" ? "x" : "y";
-          setTree((t) =>
-            resizeParent(
-              t,
-              focus,
-              axis,
-              key === "h" || key === "k" ? -0.05 : 0.05,
-            ),
+        if (e.ctrlKey && keyOf(e) === "c") {
+          change({ type: "new-session" });
+          return;
+        }
+        if (e.ctrlKey && keyOf(e) === "r") {
+          setOverlay({
+            type: "prompt",
+            title: "rename session:",
+            initial: session.name,
+            submit: (name) => change({ type: "rename-session", name }, false),
+          });
+          return;
+        }
+        if (e.ctrlKey && keyOf(e) === "u") {
+          setOverlay({ type: "status" });
+          return;
+        }
+        if (e.key === "Enter") {
+          const pane = surface.current?.querySelector<HTMLElement>(
+            `[data-pane="${focus}"] .pane-body`,
           );
-        } else move(key);
+          setCopy(enterCopyMode(pane?.innerText || ""));
+          return;
+        }
+        if (e.key === "Q") {
+          change({ type: "close-session" });
+          return;
+        }
+        if (e.key === "X") {
+          setOverlay({
+            type: "confirm",
+            title: `kill window ${win.name}? (y/n)`,
+            accept: () => change({ type: "close-window" }),
+          });
+          return;
+        }
+        if (e.key === ")" || e.key === "(") {
+          change({ type: "next-session", delta: e.key === ")" ? 1 : -1 });
+          return;
+        }
+        if (/^[1-9]$/.test(e.key)) {
+          const target = session.windows[Number(e.key) - 1];
+          if (target) change({ type: "window", id: target.id });
+          return;
+        }
+        if (e.key === "c") change({ type: "new-window" });
+        else if (e.key === "u") picker("sessions");
+        else if (e.key === "w") picker("windows");
+        else if (e.key === "g")
+          setOverlay({
+            type: "prompt",
+            title: "switch to session:",
+            initial: "",
+            submit: (value) => {
+              const target =
+                state.sessions.find(
+                  (s) => s.name === value || s.id === value,
+                ) || state.sessions[Number(value)];
+              if (target) change({ type: "session", id: target.id });
+              else setNotice(`session not found: ${value}`);
+            },
+          });
+        else if (e.key === "b") change({ type: "last-session" });
+        else if (e.key === "r" || e.key === ",")
+          setOverlay({
+            type: "prompt",
+            title: "rename window:",
+            initial: win.name,
+            submit: (name) => change({ type: "rename-window", name }, false),
+          });
+        else if (e.key === "v") splitPane("x");
+        else if (e.key === "s") splitPane("y");
+        else if (e.key === "z")
+          setPane({ type: "pane", zoom: zoom ? null : focus });
+        else if (e.key === "x") closePane();
+        else if (e.key === "m") {
+          change({ type: "mouse" }, false);
+          setNotice(`mouse: ${state.mouse ? "off" : "on"}`);
+        } else if (e.key === "o") picker("urls");
+        else if (e.key === "?") setOverlay({ type: "help" });
         return;
+      }
+      if (e.key === "Escape") return;
+      const k = keyOf(e);
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (["n", "p"].includes(k)) {
+          e.preventDefault();
+          change({ type: "next-window", delta: k === "n" ? 1 : -1 });
+          return;
+        }
+        if (["h", "j", "k", "l"].includes(k)) {
+          e.preventDefault();
+          if (e.shiftKey)
+            setPane({
+              type: "pane",
+              tree: resizeParent(
+                tree,
+                focus,
+                k === "h" || k === "l" ? "x" : "y",
+                k === "h" || k === "k" ? -0.05 : 0.05,
+              ),
+            });
+          else move(k);
+          return;
+        }
+        if (["v", "s", "z"].includes(k)) {
+          e.preventDefault();
+          if (k === "z") setPane({ type: "pane", zoom: zoom ? null : focus });
+          else splitPane(k === "v" ? "x" : "y");
+          return;
+        }
+        if (e.key === "=" || e.code === "Equal") {
+          e.preventDefault();
+          const equal = (node: Tree): Tree =>
+            node.kind === "leaf"
+              ? node
+              : {
+                  ...node,
+                  ratio: 0.5,
+                  first: equal(node.first),
+                  second: equal(node.second),
+                };
+          setPane({ type: "pane", tree: equal(tree) });
+          return;
+        }
+      }
+      if (editable(e.target)) return;
+      if (["ArrowDown", "ArrowUp", "j", "k"].includes(e.key)) {
+        e.preventDefault();
+        surface.current
+          ?.querySelector(`[data-pane="${focus}"] .pane-body`)
+          ?.scrollBy({
+            top:
+              fontSize * 3 * (e.key === "j" || e.key === "ArrowDown" ? 1 : -1),
+          });
+        return;
+      }
+      if (e.key === "/" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        picker("pages");
+        return;
+      }
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const input = surface.current?.querySelector<HTMLInputElement>(
+          `[data-pane="${focus}"] .terminal-prompt input`,
+        );
+        input?.focus({ preventScroll: true });
       }
     };
     window.addEventListener("keydown", listener);
     return () => window.removeEventListener("keydown", listener);
   }, [
-    recording,
-    enabled,
-    modal,
-    prefix,
+    overlay,
+    query,
+    filtered,
+    selected,
+    copy,
     armed,
+    prefix,
+    state,
+    session,
+    win,
+    tree,
     focus,
-    navigate,
-    startSplit,
-    closePane,
+    zoom,
+    fontSize,
+    change,
+    picker,
     move,
-    notify,
-    active,
+    closePane,
+    splitPane,
+    setPane,
   ]);
-  const paneTitle = (content: string) =>
-    content === "main"
-      ? home
-        ? "whoami"
-        : title
-      : content === "intro"
-        ? "whoami"
-        : content === "articles"
-          ? "journal.md"
-          : content === "projects"
-            ? "projects/"
-            : catalog.posts.find((p) => p.path === content)?.title || "content";
+  useEffect(() => {
+    if (!copy || !copyPre.current) return;
+    copyPre.current
+      .querySelector(".copy-cursor")
+      ?.scrollIntoView({ block: "nearest" });
+  }, [copy?.cursor]);
+  useEffect(() => {
+    const nav = windowNav.current;
+    if (!nav) return;
+    const keepCurrentVisible = () => {
+      const current = nav.querySelector<HTMLElement>(".current");
+      if (!current) return;
+      const outer = nav.getBoundingClientRect(),
+        inner = current.getBoundingClientRect();
+      if (inner.left < outer.left) nav.scrollLeft += inner.left - outer.left;
+      else if (inner.right > outer.right)
+        nav.scrollLeft += inner.right - outer.right;
+    };
+    keepCurrentVisible();
+    const observer = new ResizeObserver(keepCurrentVisible);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [win.id, session.windows.length, fontSize]);
   const renderLeaf = (leaf: Leaf) => (
     <section
+      key={leaf.id}
       className={`pane ${focus === leaf.id ? "is-focused is-mobile-selected" : ""}`}
       data-pane={leaf.id}
-      key={leaf.id}
       tabIndex={-1}
-      aria-label={`Pane: ${paneTitle(leaf.content)}`}
-      onPointerDown={() => setFocus(leaf.id)}
-      onFocus={() => setFocus(leaf.id)}
+      aria-label={`pane ${leaf.id}`}
+      onPointerDown={(event) => {
+        interaction.current = "pointer";
+        if (state.mouse) selectPane(leaf.id);
+        else if (
+          (event.target as HTMLElement).closest(".terminal-prompt input")
+        )
+          event.preventDefault();
+      }}
+      onFocus={() => {
+        if (!copy && (state.mouse || interaction.current === "keyboard"))
+          dispatch({ type: "pane", focus: leaf.id });
+      }}
     >
-      <header className="pane-header">
-        <button
-          className="pane-name"
-          onClick={() => focusPane(leaf.id)}
-          aria-label={`聚焦 ${leaves(tree).findIndex((l) => l.id === leaf.id) + 1} ${paneTitle(leaf.content)}`}
-        >
-          <span className="pane-number">
-            {leaves(tree).findIndex((l) => l.id === leaf.id) + 1}
-          </span>
-          <span>{paneTitle(leaf.content)}</span>
-        </button>
-        <span className="pane-path">
-          {leaf.content === "main"
-            ? canonical
-            : "~/" + (leaf.content.startsWith("/") ? "journal" : leaf.content)}
-        </span>
-        <div className="pane-controls">
-          <button
-            title="左右分屏"
-            aria-label="左右分屏"
-            onClick={() => {
-              setFocus(leaf.id);
-              startSplit("x");
-            }}
-          >
-            <SplitSquareHorizontal size={13} />
-          </button>
-          <button
-            title="上下分屏"
-            aria-label="上下分屏"
-            onClick={() => {
-              setFocus(leaf.id);
-              startSplit("y");
-            }}
-          >
-            <SplitSquareVertical size={13} />
-          </button>
-          <button
-            title="放大或还原"
-            aria-label="放大或还原 pane"
-            onClick={() => {
-              setFocus(leaf.id);
-              setZoom((z) => (z ? null : leaf.id));
-            }}
-          >
-            {zoom ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-          </button>
-          {
-            <button
-              title="关闭 pane"
-              aria-label="关闭 pane"
-              onClick={() => {
-                const next = remove(tree, leaf.id);
-                if (next) {
-                  setTree(next);
-                  setFocus(leaves(next)[0].id);
-                } else {
-                  setTree(defaultTree(home));
-                  setFocus("main");
-                }
-                setZoom(null);
-              }}
-            >
-              <X size={13} />
-            </button>
-          }
-        </div>
-      </header>
       <div className="pane-body" data-pane-scroll>
-        {leaf.content === "main" ? (
+        {leaf.content === "shell" ? null : (catalog.routes[leaf.content]
+            ?.target || leaf.content) === canonical ? (
           children
-        ) : ["intro", "articles", "projects"].includes(leaf.content) ? (
-          <PaneSummary content={leaf.content} catalog={catalog} />
         ) : (
-          <RemoteContent
-            id={leaf.content}
-            paneKey={
-              catalog.posts.find((p) => p.path === leaf.content)?.paneKey ||
-              "missing"
-            }
-          />
+          <RemotePage path={leaf.content} catalog={catalog} />
         )}
+        <ShellInput
+          path={win.path}
+          active={
+            focus === leaf.id &&
+            (leaf.content === "shell" || leaf.content === "/") &&
+            !overlay &&
+            !copy
+          }
+          execute={execute}
+        />
       </div>
+      {copy && focus === leaf.id && (
+        <div className="terminal-copy" role="region" aria-label="copy-mode">
+          <div className="copy-indicator">
+            [{copy.cursor}/{copy.units.length}]
+            {copy.anchor !== null ? " VISUAL" : ""}
+          </div>
+          <pre ref={copyPre}>
+            {copy.units.map((char, index) => (
+              <span
+                key={index}
+                className={
+                  index === copy.cursor
+                    ? "copy-cursor"
+                    : copy.anchor !== null &&
+                        index >= Math.min(copy.cursor, copy.anchor) &&
+                        index <= Math.max(copy.cursor, copy.anchor)
+                      ? "copy-selected"
+                      : undefined
+                }
+              >
+                {char}
+              </span>
+            ))}
+          </pre>
+        </div>
+      )}
     </section>
   );
-  const renderTree = (node: Tree): ReactNode => {
-    if (node.kind === "leaf") return renderLeaf(node);
-    return (
+  const renderTree = (node: Tree): ReactNode =>
+    node.kind === "leaf" ? (
+      renderLeaf(node)
+    ) : (
       <div
         className={`split split-${node.axis}`}
-        data-split={node.id}
         key={node.id}
+        data-split={node.id}
       >
         <div
           className="split-part"
@@ -594,54 +1016,37 @@ export function Workspace({
         <div
           className={`resize-handle handle-${node.axis}`}
           role="separator"
-          tabIndex={0}
-          aria-label={node.axis === "x" ? "调整左右分屏" : "调整上下分屏"}
           aria-orientation={node.axis === "x" ? "vertical" : "horizontal"}
+          aria-label={node.axis === "x" ? "调整左右分屏" : "调整上下分屏"}
           aria-valuemin={20}
           aria-valuemax={80}
           aria-valuenow={Math.round(node.ratio * 100)}
-          onKeyDown={(e) => {
-            if (
-              ["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(
-                e.key,
-              )
-            ) {
-              e.preventDefault();
-              e.stopPropagation();
-              setTree((t) =>
-                resize(
-                  t,
-                  node.id,
-                  node.ratio +
-                    (["ArrowLeft", "ArrowUp"].includes(e.key) ? -0.05 : 0.05),
-                ),
-              );
-            }
-          }}
+          tabIndex={state.mouse ? 0 : -1}
           onPointerDown={(e) => {
+            if (!state.mouse) return;
             e.preventDefault();
-            const handle = e.currentTarget;
+            const handle = e.currentTarget,
+              box = handle.parentElement!.getBoundingClientRect();
             handle.setPointerCapture(e.pointerId);
-            const container = handle.parentElement!;
-            const rect = container.getBoundingClientRect();
-            const update = (event: PointerEvent) =>
-              setTree((t) =>
-                resize(
-                  t,
+            const drag = (event: PointerEvent) =>
+              setPane({
+                type: "pane",
+                tree: resize(
+                  tree,
                   node.id,
                   node.axis === "x"
-                    ? (event.clientX - rect.left) / rect.width
-                    : (event.clientY - rect.top) / rect.height,
+                    ? (event.clientX - box.left) / box.width
+                    : (event.clientY - box.top) / box.height,
                 ),
-              );
-            const stop = () => {
-              handle.removeEventListener("pointermove", update);
-              handle.removeEventListener("pointerup", stop);
-              handle.removeEventListener("pointercancel", stop);
+              });
+            const done = () => {
+              handle.removeEventListener("pointermove", drag);
+              handle.removeEventListener("pointerup", done);
+              handle.removeEventListener("pointercancel", done);
             };
-            handle.addEventListener("pointermove", update);
-            handle.addEventListener("pointerup", stop);
-            handle.addEventListener("pointercancel", stop);
+            handle.addEventListener("pointermove", drag);
+            handle.addEventListener("pointerup", done);
+            handle.addEventListener("pointercancel", done);
           }}
         />
         <div
@@ -652,353 +1057,168 @@ export function Workspace({
         </div>
       </div>
     );
-  };
-  const activeLeaf = zoom ? leaves(tree).find((l) => l.id === zoom) : null;
-  const currentLinks =
-    modal === "links"
-      ? [
-          ...(surface.current
-            ?.querySelector<HTMLElement>(`[data-pane="${focus}"]`)
-            ?.querySelectorAll<HTMLAnchorElement>("a[href]") || []),
-        ]
-          .map((a) => ({
-            href: a.href,
-            label: a.textContent?.trim() || a.href,
-          }))
-          .filter(
-            (a, i, list) => list.findIndex((b) => b.href === a.href) === i,
-          )
-      : [];
+  const zoomed = zoom ? leaves(tree).find((p) => p.id === zoom) : null;
   return (
-    <div className="terminal-shell" data-ready={restored ? "true" : "false"}>
-      <a className="skip-link" href="#workspace">
-        跳到内容
-      </a>
-      <header className="shell-header">
-        <Link className="brand" href="/">
-          <Terminal size={20} />
-          <strong>
-            ryou<span>.workspace</span>
-          </strong>
-        </Link>
-        <div className="header-center">
-          <span className="live-dot" /> 一个持续生长的个人工作台
-        </div>
-        <nav className="header-actions" aria-label="站点工具">
-          <Link href="/page/search/" aria-label="搜索文章">
-            <Search size={17} />
-          </Link>
-          <button
-            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-            aria-label={theme === "dark" ? "切换浅色主题" : "切换深色主题"}
-          >
-            {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-          </button>
-          <button
-            onClick={() => setModal("settings")}
-            aria-label="快捷键与设置"
-          >
-            <Keyboard size={17} />
-          </button>
-          <a
-            href="https://github.com/WASIDJ"
-            target="_blank"
-            rel="noreferrer"
-            className="github-link"
-          >
-            GitHub <ArrowUpRight size={14} />
-          </a>
-        </nav>
-      </header>
-      <div className="workspace-caption" role="region" aria-label="当前位置">
-        <span>
-          <span className="caption-slash">~/</span> {windows[active].name}
-          <span className="caption-sep"> / </span>
-          {home ? "welcome" : title}
-        </span>
-        <button onClick={() => setModal("settings")}>
-          <span className="desktop-hint">
-            <kbd>{chordLabel(prefix)}</kbd> + <kbd>?</kbd>
-          </span>
-          <span className="mobile-hint">操作帮助</span>
-        </button>
-      </div>
-      <main
-        className={`workspace ${home ? "home-workspace" : "document-workspace"} ${zoom ? "is-zoomed" : ""}`}
-        id="workspace"
-        ref={surface}
-      >
-        {activeLeaf ? renderLeaf(activeLeaf) : renderTree(tree)}
+    <div
+      className="terminal-shell terminal-native"
+      data-ready={ready ? "true" : "false"}
+      data-mouse={state.mouse ? "on" : "off"}
+      data-copy={copy ? "on" : "off"}
+      style={{ fontSize: `${fontSize}pt` }}
+      onClickCapture={(e) => {
+        if (
+          !state.mouse &&
+          e.detail > 0 &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          (e.target as HTMLElement).closest("a[href]")
+        )
+          e.preventDefault();
+      }}
+    >
+      <main id="workspace" className="workspace" ref={surface}>
+        {zoomed ? renderLeaf(zoomed) : renderTree(tree)}
       </main>
-      <div className="workspace-bottom" role="region" aria-label="工作台状态">
-        <span>
-          <span className="live-dot" /> {notice || "独立思考 · 开放构建"}
+      <footer
+        className="tmux-status"
+        aria-label="tmux status"
+        data-session={session.id}
+        data-window={win.id}
+      >
+        <span className={`tmux-session ${armed ? "is-prefix" : ""}`}>
+          <span className="power-cap"></span>
+          <span className="segment-icon"></span>
+          <span className="segment-text">{session.name}</span>
+          <span className="power-cap end-cap"></span>
         </span>
-        <button
-          onClick={() => {
-            setTree(defaultTree(home));
-            setFocus("main");
-            setZoom(null);
-            notify("布局已重置。");
-          }}
-        >
-          <RotateCcw size={12} /> 重置布局
-        </button>
-        <span className="desktop-hint">
-          {leaves(tree).length} panes · {zoom ? "zoom" : focus}
-        </span>
-      </div>
-      <footer className="statusbar">
-        <button
-          className={`session-pill ${armed ? "prefix-active" : ""}`}
-          onClick={() => setModal("windows")}
-          aria-label={`选择栏目 ${armed ? "PREFIX" : "ryou"}`}
-        >
-          <Terminal size={15} />
-          <span>{armed ? "PREFIX" : "ryou"}</span>
-        </button>
-        <nav className="window-tabs" aria-label="主导航">
-          {windows.map((w, i) => (
-            <Link
-              key={w.path}
-              href={w.path}
-              className={active === i ? "active" : ""}
-              onClick={() => setStorage("ryou-previous-window", pathname)}
-              aria-current={active === i ? "page" : undefined}
+        <nav ref={windowNav} className="tmux-windows" aria-label="tmux windows">
+          {session.windows.map((w, i) => (
+            <span
+              key={w.id}
+              className={w.id === win.id ? "current" : ""}
+              data-window-id={w.id}
             >
-              <span>{i + 1}</span>
-              <w.Icon size={13} />
-              <span>{w.label}</span>
-            </Link>
+              <span className="window-index">{i + 1}</span>
+              <span>{w.name}</span>
+              {w.id === win.id && <span>*</span>}
+            </span>
           ))}
         </nav>
-        <div className="status-right">
-          <span className="status-command">{windows[active].name}</span>
-          <span className="status-host">wasidj</span>
-          <span className="status-clock">
-            {clock} <small>CST</small>
+        <span className="tmux-modules">
+          <span className="tmux-module command-module">
+            <span className="power-cap"></span>
+            <span className="segment-icon"></span>
+            <span className="segment-text">
+              {copy
+                ? "copy-mode"
+                : leaves(tree).find((p) => p.id === focus)?.content === "shell"
+                  ? "zsh"
+                  : "less"}
+            </span>
           </span>
-        </div>
+          <span className="tmux-module host-module">
+            <span className="power-cap"></span>
+            <span className="segment-icon">󰒋</span>
+            <span className="segment-text">wasidj</span>
+          </span>
+          <span className="tmux-module time-module">
+            <span className="power-cap"></span>
+            <span className="segment-icon">󰃰</span>
+            <span className="segment-text">{clock}</span>
+            <span className="power-cap end-cap"></span>
+          </span>
+        </span>
       </footer>
+      {(notice || armed) && (
+        <div className="tmux-message" role="status">
+          {armed ? `prefix Ctrl+${prefix.toUpperCase()}` : notice}
+        </div>
+      )}
       <dialog
         ref={dialog}
-        className="workspace-dialog"
+        className="tmux-dialog"
+        tabIndex={-1}
         onCancel={() => {
-          setModal(null);
-          setRecording(false);
-        }}
-        onClose={() => {
-          setModal(null);
-          setRecording(false);
+          setOverlay(null);
+          setArmed(false);
         }}
       >
-        <header>
-          <div>
-            <span className="eyebrow">WORKSPACE / COMMAND MENU</span>
-            <h2>
-              {modal === "settings"
-                ? "快捷键与设置"
-                : modal === "windows"
-                  ? "切换栏目"
-                  : modal === "links"
-                    ? "当前内容链接"
-                    : "在新 pane 中打开"}
-            </h2>
-          </div>
-          <button onClick={() => setModal(null)} aria-label="关闭菜单">
-            <X size={20} />
-          </button>
-        </header>
-        {modal === "settings" ? (
-          <div className="settings-content">
-            <div className="quick-actions" aria-label="当前 pane 操作">
-              <button onClick={() => startSplit("x")}>左右分屏</button>
-              <button onClick={() => startSplit("y")}>上下分屏</button>
-              <button
-                onClick={() => {
-                  setZoom((z) => (z ? null : focus));
-                  setModal(null);
-                }}
-              >
-                放大 / 还原
-              </button>
-              <button
-                onClick={() => {
-                  closePane();
-                  setModal(null);
-                }}
-              >
-                关闭 pane
-              </button>
-              <button onClick={() => setModal("links")}>链接选择器</button>
-              <button
-                onClick={() =>
-                  navigate(
-                    getStorage("ryou-previous-window") || previousPath.current,
-                  )
-                }
-              >
-                上一栏目
-              </button>
-            </div>
-            <p>
-              沿用我的 tmux
-              操作习惯。先按前缀，随后在两秒内按操作键。所有功能也可以点击操作。
-            </p>
-            <div className="setting-row">
-              <label htmlFor="hotkeys">启用键盘快捷键</label>
+        {overlay?.type === "picker" && (
+          <>
+            <div className="tmux-popup-title">{overlay.title}</div>
+            <label className="fzf-query">
+              <span>&gt;</span>
               <input
-                id="hotkeys"
-                type="checkbox"
-                checked={enabled}
+                ref={promptInput}
+                value={query}
                 onChange={(e) => {
-                  setEnabled(e.target.checked);
-                  setStorage("ryou-keys", e.target.checked ? "on" : "off");
-                  setArmed(false);
+                  setQuery(e.target.value);
+                  setSelected(0);
                 }}
-              />
-            </div>
-            <div className="setting-row">
-              <span>
-                前缀键 <kbd>{chordLabel(prefix)}</kbd>
-              </span>
-              <button
-                className="secondary-button"
-                onClick={() => setRecording(true)}
-              >
-                {recording ? "按下新的组合键，Esc 取消" : "重新绑定"}
-              </button>
-            </div>
-            <p className="setting-note">
-              部分浏览器或系统会占用 Ctrl+Q / Alt
-              组合键，可重新绑定前缀或使用点击入口。输入框中不会接管快捷键。
-            </p>
-            <table className="shortcut-table">
-              <caption className="sr-only">前缀快捷键</caption>
-              <tbody>
-                {helpRows.map(([keys, description]) => (
-                  <tr key={keys}>
-                    <th scope="row">
-                      <kbd>{chordLabel(prefix)}</kbd> + <kbd>{keys}</kbd>
-                    </th>
-                    <td>{description}</td>
-                  </tr>
-                ))}
-                <tr>
-                  <th scope="row">
-                    <kbd>Alt + h/j/k/l</kbd>
-                  </th>
-                  <td>切换 pane 焦点</td>
-                </tr>
-                <tr>
-                  <th scope="row">
-                    <kbd>Alt + Shift + h/j/k/l</kbd>
-                  </th>
-                  <td>调整分屏比例</td>
-                </tr>
-              </tbody>
-            </table>
-            <a
-              className="text-link"
-              href="https://github.com/WASIDJ/.config/blob/main/tmux/tmux.conf"
-              target="_blank"
-              rel="noreferrer"
-            >
-              查看原始 tmux 配置 <ArrowUpRight size={14} />
-            </a>
-          </div>
-        ) : (
-          <div className="picker">
-            <label className="search-field">
-              <Search size={17} />
-              <span className="sr-only">筛选菜单</span>
-              <input
-                type="search"
-                placeholder="筛选…"
-                value={modalQuery}
-                onChange={(e) => setModalQuery(e.target.value)}
+                aria-label="筛选菜单"
+                autoComplete="off"
               />
             </label>
-            {modal === "windows" &&
-              windows
-                .filter(
-                  (w) =>
-                    w.label.includes(modalQuery) || w.name.includes(modalQuery),
-                )
-                .map((w, i) => (
-                  <button key={w.path} onClick={() => navigate(w.path)}>
-                    <w.Icon size={18} />
-                    <span>
-                      {w.label}
-                      <small>{w.path}</small>
-                    </span>
-                    <kbd>{i + 1}</kbd>
-                  </button>
-                ))}
-            {modal === "content" && (
-              <>
-                {[
-                  { id: "intro", label: "个人介绍", note: "whoami" },
-                  { id: "articles", label: "精选文章", note: "journal.md" },
-                  { id: "projects", label: "代表项目", note: "projects/" },
-                ]
-                  .filter(
-                    (p) =>
-                      p.label.includes(modalQuery) ||
-                      p.note.includes(modalQuery),
-                  )
-                  .map((p) => (
-                    <button key={p.id} onClick={() => chooseContent(p.id)}>
-                      <Terminal size={18} />
-                      <span>
-                        {p.label}
-                        <small>{p.note}</small>
-                      </span>
-                      <ArrowUpRight size={14} />
-                    </button>
-                  ))}
-                {catalog.posts
-                  .filter((p) =>
-                    p.title.toLowerCase().includes(modalQuery.toLowerCase()),
-                  )
-                  .map((p) => (
-                    <button key={p.path} onClick={() => chooseContent(p.path)}>
-                      <BookOpen size={18} />
-                      <span>
-                        {p.title}
-                        <small>{p.path}</small>
-                      </span>
-                      <ArrowUpRight size={14} />
-                    </button>
-                  ))}
-              </>
-            )}
-            {modal === "links" &&
-              (currentLinks.length ? (
-                currentLinks
-                  .filter((l) =>
-                    l.label.toLowerCase().includes(modalQuery.toLowerCase()),
-                  )
-                  .map((l) => (
-                    <a
-                      key={l.href}
-                      href={l.href}
-                      onClick={() => setModal(null)}
-                    >
-                      <LinkIcon size={17} />
-                      <span>
-                        {l.label}
-                        <small>{l.href}</small>
-                      </span>
-                      <ArrowUpRight size={14} />
-                    </a>
-                  ))
-              ) : (
-                <p>这个 pane 暂时没有链接。</p>
+            <div
+              className="tmux-options"
+              role="listbox"
+              aria-label={overlay.title}
+            >
+              {filtered.map((row, i) => (
+                <div
+                  key={row.id}
+                  role="option"
+                  aria-selected={i === selected}
+                  className={i === selected ? "selected" : ""}
+                >
+                  <span>{i === selected ? "▶" : " "}</span>
+                  <span>{row.label}</span>
+                  <span>{row.detail}</span>
+                </div>
               ))}
-          </div>
+            </div>
+            <div className="tmux-popup-hint">
+              {filtered.length}/{overlay.rows.length} · ↑↓ / j k · Enter · /
+              filter · Esc
+              {overlay.title === "choose-session" ? " · x delete" : ""}
+            </div>
+          </>
+        )}
+        {overlay?.type === "prompt" && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              overlay.submit(query);
+              setOverlay(null);
+            }}
+          >
+            <label>
+              {overlay.title}{" "}
+              <input
+                ref={promptInput}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label={overlay.title}
+                autoComplete="off"
+              />
+            </label>
+          </form>
+        )}
+        {overlay?.type === "confirm" && <p>{overlay.title}</p>}
+        {overlay?.type === "help" && <pre>{help}</pre>}
+        {overlay?.type === "status" && (
+          <pre>{`session: ${session.name}\nwindow: ${win.name}\npanes: ${leaves(tree).length}\nmouse: ${state.mouse ? "on" : "off"}\ncopy-mode: ${copy ? "on" : "off"}\n\nEsc / q`}</pre>
         )}
       </dialog>
+      <noscript>
+        <nav className="terminal-fallback" aria-label="主导航">
+          {sections.map((s) => (
+            <a key={s.path} href={s.path}>
+              {s.name}
+            </a>
+          ))}
+        </nav>
+      </noscript>
     </div>
   );
 }
