@@ -37,6 +37,8 @@ export function Search() {
   };
   useEffect(() => {
     initialize();
+    const query = new URLSearchParams(window.location.search).get("q");
+    if (query) setQ(query);
   }, []);
   const tokens = q.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
   const results = tokens.length
