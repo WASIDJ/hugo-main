@@ -1,0 +1,68 @@
+{
+  "name": "ryou-workspace",
+  "version": "1.0.0",
+  "description": "Ryou personal workspace · Next.js + tmux",
+  "scripts": {
+    "content": "node scripts/prepare.mjs",
+    "dev": "npm run content && next dev",
+    "build": "npm run content && next build && node scripts/verify-export.mjs",
+    "preview": "node scripts/serve.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "test:e2e": "playwright test",
+    "check": "npm run test && npm run build && npm run typecheck"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WASIDJ/hugo-main.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/WASIDJ/hugo-main/issues"
+  },
+  "homepage": "https://github.com/WASIDJ/hugo-main#readme",
+  "dependencies": {
+    "katex": "0.19.0",
+    "lucide-react": "1.52.0",
+    "mermaid": "12.1.0",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "rehype-katex": "7.0.1",
+    "rehype-raw": "7.0.0",
+    "rehype-sanitize": "6.0.0",
+    "rehype-slug": "6.0.0",
+    "rehype-stringify": "10.0.1",
+    "remark-gfm": "4.0.1",
+    "remark-math": "6.0.0",
+    "remark-parse": "11.0.0",
+    "remark-rehype": "11.1.2",
+    "rough-notation": "0.5.1",
+    "sharp": "0.35.5",
+    "shiki": "4.5.0",
+    "unified": "11.0.5",
+    "unist-util-visit": "5.1.0",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.64.0",
+    "@types/node": "26.6.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "lighthouse": "13.5.0",
+    "prettier": "3.9.9",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "overrides": {
+    "katex": "$katex"
+  }
+}
