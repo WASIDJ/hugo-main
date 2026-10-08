@@ -58,7 +58,7 @@ try {
   );
   go.run(result.instance).catch(showError);
   await wasmReady;
-  await connect();
+  connect();
 } catch (error) {
   showError(error);
 }

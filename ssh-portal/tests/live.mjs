@@ -131,6 +131,21 @@ try {
     false,
     "private keys are not persisted",
   );
+  // Disconnect/reconnect exercises the client lifecycle in the same WASM page.
+  await page.keyboard.press("Control+q");
+  await page.keyboard.press("d");
+  await waitFor("连接已关闭");
+  await page.keyboard.press("Enter");
+  await waitFor("wasm-validation");
+  assert.equal(
+    Number(
+      ssh(
+        `/opt/homebrew/bin/tmux display-message -p -t ${windowId} "#{window_panes}"`,
+      ),
+    ),
+    before + 1,
+    "Enter reconnect preserves tmux panes",
+  );
   // A changed host pin must abort before SSH authentication or a PTY is opened.
   await page.route("**/config.json", async (route) => {
     const response = await route.fetch();
@@ -147,7 +162,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: real Darwin SSH, UTF-8, tmux keys, PTY resize, refresh, memory-only keys, strict host pin",
+    "PASS: real Darwin SSH, UTF-8, tmux keys, PTY resize, refresh, Enter reconnect, memory-only keys, strict host pin",
   );
 } catch (error) {
   console.log(

@@ -65,7 +65,7 @@ npm run ssh:deploy -- mini-t --skip-serve
 
 ## 验证与回滚
 
-本次已通过真实 Mac mini 的浏览器 SSH 验证：远端 Darwin 命令、UTF-8、真实 tmux prefix 分屏、PTY resize、刷新保留 panes、内存密钥、host pin 不匹配拒绝连接；仅创建并清理 `wasm-validation` 临时窗口，不终止已有任务。Live 测试需显式运行，不放入常规 CI：
+本次已通过真实 Mac mini 的浏览器 SSH 验证：远端 Darwin 命令、UTF-8、真实 tmux prefix 分屏、PTY resize、刷新保留 panes、断线 Enter 重连、内存密钥、host pin 不匹配拒绝连接；仅创建并清理 `wasm-validation` 临时窗口，不终止已有任务。Live 测试需显式运行，不放入常规 CI：
 
 ```sh
 MINI_SSH_URL=https://your-mini.your-tailnet.ts.net:8443/ node ssh-portal/tests/live.mjs
