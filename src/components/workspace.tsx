@@ -9,6 +9,13 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { useTmux } from "./tmux-provider";
 import {
+  enterCopyMode,
+  moveCopyCursor,
+  toggleCopySelection,
+  selectedCopyText,
+  type CopyBuffer,
+} from "@/lib/copy-mode";
+import {
   sessionOf,
   windowOf,
   normalizePath,
@@ -245,11 +252,7 @@ export function Workspace({
     [theme, setTheme] = useState("dark"),
     [fontSize, setFontSize] = useState(18),
     [prefix, setPrefix] = useState("q");
-  const [copy, setCopy] = useState<{
-    text: string;
-    cursor: number;
-    anchor: number | null;
-  } | null>(null);
+  const [copy, setCopy] = useState<CopyBuffer | null>(null);
   const surface = useRef<HTMLElement>(null),
     dialog = useRef<HTMLDialogElement>(null),
     promptInput = useRef<HTMLInputElement>(null),
@@ -669,9 +672,7 @@ export function Workspace({
         }
         if (e.key === "v") {
           e.preventDefault();
-          setCopy((c) =>
-            c ? { ...c, anchor: c.anchor === null ? c.cursor : null } : c,
-          );
+          setCopy((c) => (c ? toggleCopySelection(c) : c));
           return;
         }
         if (
@@ -687,48 +688,22 @@ export function Workspace({
           ].includes(e.key)
         ) {
           e.preventDefault();
-          setCopy((c) => {
-            if (!c) return c;
-            let cursor = c.cursor;
-            if (["h", "ArrowLeft"].includes(e.key)) cursor--;
-            if (["l", "ArrowRight"].includes(e.key)) cursor++;
-            if (["j", "ArrowDown"].includes(e.key)) {
-              const lineStart = c.text.lastIndexOf("\n", c.cursor - 1) + 1,
-                next = c.text.indexOf("\n", c.cursor);
-              if (next >= 0) {
-                const end = c.text.indexOf("\n", next + 1);
-                cursor = Math.min(
-                  next + 1 + c.cursor - lineStart,
-                  end < 0 ? c.text.length - 1 : end,
-                );
-              }
-            }
-            if (["k", "ArrowUp"].includes(e.key)) {
-              const start = c.text.lastIndexOf("\n", c.cursor - 1) + 1;
-              if (start > 0) {
-                const previous = c.text.lastIndexOf("\n", start - 2) + 1;
-                cursor = Math.min(previous + c.cursor - start, start - 1);
-              }
-            }
-            return {
-              ...c,
-              cursor: Math.max(0, Math.min(c.text.length - 1, cursor)),
-            };
-          });
+          const direction =
+            (
+              {
+                ArrowLeft: "h",
+                ArrowDown: "j",
+                ArrowUp: "k",
+                ArrowRight: "l",
+              } as Record<string, "h" | "j" | "k" | "l">
+            )[e.key] || (e.key as "h" | "j" | "k" | "l");
+          setCopy((c) => (c ? moveCopyCursor(c, direction) : c));
           return;
         }
         if (e.key === "y") {
           e.preventDefault();
-          const start =
-              copy.anchor === null
-                ? copy.cursor
-                : Math.min(copy.anchor, copy.cursor),
-            end =
-              copy.anchor === null
-                ? copy.text.indexOf("\n", start)
-                : Math.max(copy.anchor, copy.cursor) + 1;
           void navigator.clipboard
-            .writeText(copy.text.slice(start, end < 0 ? copy.text.length : end))
+            .writeText(selectedCopyText(copy))
             .then(() => {
               setCopy(null);
               setNotice("copied");
@@ -774,7 +749,7 @@ export function Workspace({
           const pane = surface.current?.querySelector<HTMLElement>(
             `[data-pane="${focus}"] .pane-body`,
           );
-          setCopy({ text: pane?.innerText || "", cursor: 0, anchor: null });
+          setCopy(enterCopyMode(pane?.innerText || ""));
           return;
         }
         if (e.key === "Q") {
@@ -970,11 +945,11 @@ export function Workspace({
       {copy && focus === leaf.id && (
         <div className="terminal-copy" role="region" aria-label="copy-mode">
           <div className="copy-indicator">
-            [{copy.cursor}/{copy.text.length}]
+            [{copy.cursor}/{copy.units.length}]
             {copy.anchor !== null ? " VISUAL" : ""}
           </div>
           <pre ref={copyPre}>
-            {copy.text.split("").map((char, index) => (
+            {copy.units.map((char, index) => (
               <span
                 key={index}
                 className={
@@ -1139,7 +1114,6 @@ export function Workspace({
           setOverlay(null);
           setArmed(false);
         }}
-        onClose={() => setOverlay(null)}
       >
         {overlay?.type === "picker" && (
           <>

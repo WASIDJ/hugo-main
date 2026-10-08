@@ -237,3 +237,44 @@ test("no JavaScript preserves readable text and fallback navigation", async ({
   ).toBeVisible();
   await context.close();
 });
+
+test("keyboard copy selects and copies a full emoji grapheme in the browser", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/");
+  await expect(page.locator(".terminal-shell")).toHaveAttribute(
+    "data-ready",
+    "true",
+  );
+  // A terminal output fixture, independent of which articles are currently published.
+  await page.locator(".pane-body").evaluate((element) => {
+    const text = document.createElement("p");
+    text.textContent = "👩‍💻e\u0301中文";
+    element.prepend(text);
+  });
+  await key(page, "Enter");
+  await page.keyboard.press("v");
+  await page.keyboard.press("y");
+  await expect(
+    page.getByRole("region", { name: "copy-mode" }),
+  ).not.toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("👩‍💻");
+});
+
+test("closing a popup cannot dismiss a subsequently opened session picker", async ({
+  page,
+}) => {
+  await page.goto("/");
+  for (let i = 0; i < 4; i++) {
+    await key(page, "?");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("q");
+    await key(page, "u");
+    await expect(
+      page.getByRole("listbox", { name: "choose-session" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+  }
+});

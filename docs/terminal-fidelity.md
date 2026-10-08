@@ -15,8 +15,8 @@
 
 ## 验证结果
 
-- 14 个单元测试：内容处理、旧路由映射、tmux session/window 状态、pane 导航与持久化校验。
-- 9 个浏览器测试：仅键盘的 pane/window/session 操作、mouse off/on、URL picker、vi clipboard、命令与主题、文章公式/评论标识/404、字体与响应式、无 JS 阅读。
+- 17 个单元测试：内容处理、旧路由映射、tmux session/window 状态、pane 导航与持久化校验、Unicode grapheme 复制。
+- 11 个浏览器测试：仅键盘的 pane/window/session 操作、mouse off/on、URL picker、vi clipboard、命令与主题、文章公式/评论标识/404、字体与响应式、无 JS 阅读、emoji 完整复制与弹层连续切换。
 - 167 条旧站 URL、canonical、JSON-LD、验证文件、RSS、sitemap 和草稿排除检查通过。
 - 暗色首页 Axe 检查通过。没有将旧版 Lighthouse 测量当成本分支性能证明。
 - 草稿截图：[终端首页](preview/terminal-draft.png)。它是当前实现的截图，不是用户指定的参考图。
