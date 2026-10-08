@@ -24,27 +24,8 @@ const date = (value: string) =>
 export function Intro() {
   return (
     <section className="terminal-whoami">
-      <div className="shell-directory">
-        <span>~/blog</span>
-        <span className="shell-branch">main</span>
-      </div>
-      <p>
-        <span className="shell-chevron">&gt;</span> whoami
-      </p>
       <h1>Ryou</h1>
-      <p>
-        CS / Shanghai
-        <br />
-        Go · Backend · AI Infra · Agent Engineering
-      </p>
-      <p>
-        构建一些东西，保留自己的思考。
-        <br />
-        记录工程实践、开源项目、阅读和长期问题。
-      </p>
-      <p>
-        <span className="shell-chevron">&gt;</span> ls
-      </p>
+      <p>Go / Backend · AI Infra · Agent Engineering</p>
       <p>
         <Link href="/post/">posts/</Link>
         {"  "}
@@ -54,24 +35,7 @@ export function Intro() {
         {"  "}
         <Link href="/page/友链/">links.md</Link>
       </p>
-      <p>
-        <span className="shell-chevron">&gt;</span> cat contact.txt
-      </p>
-      <p>
-        <a href="https://github.com/WASIDJ">https://github.com/WASIDJ</a>
-        <br />
-        <a href="mailto:qaqnoname@163.com">qaqnoname@163.com</a>
-        <br />
-        wechat: wasidj
-      </p>
-      <p>
-        Ctrl+q ? help
-        <br />
-        Ctrl+q o URLs
-        <br />
-        Ctrl+q 1–5 windows
-        <br />/ open page
-      </p>
+      <p className="terminal-usage"># Ctrl+q ?</p>
     </section>
   );
 }

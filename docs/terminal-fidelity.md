@@ -1,28 +1,29 @@
-# 终端复刻进度
+# 个人终端配置对齐
 
-本分支是草稿，等待用户提供截图后继续视觉对照。没有把“符合配置”当成“完全复刻截图”的证据。
+用户最后明确要求：“直接就是终端样式 zsh p10k + tmux 我的个人配置，极简、直白。”因此当前实现直接依据仓库配置，移除网页式布局；不再把取得旧图片作为发布前置条件，也不声称对不可读取图片做过像素比对。
 
-## 参考和完成依据
+## 依据
 
-| 用户要求                      | 当前证据                                                                                                 | 状态                   |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------- |
-| 完全仿照指定 PNG              | 本机、对应用户目录和 `mini-t` 上的指定路径均未找到文件；缺少实际图像                                     | 待补参考图             |
-| 不保留指定 TIFF 中的样式/部分 | 指定 TIFF 同样不可读取，不能推断它具体包含什么                                                           | 待补参考图             |
-| 参考 `.config` 的 tmux 快捷键 | 读取当前仓库配置；session/window CRUD、分屏、方向、缩放、鼠标切换和 vi 复制通过浏览器验证                | 已实现可验证的网页操作 |
-| 全部通过快捷键操作            | 删除顶部导航、pane 按钮和网页工具栏；菜单使用 j/k、箭头、Enter、Esc；默认 mouse off                      | 已实现                 |
-| Ghostty 字体和基础外观        | 仓库指定 FiraCode Nerd Font Mono、18px、12px padding、Catppuccin Mocha、无窗口装饰；本地托管对应字体子集 | 配置对齐，待截图核对   |
-| 家中 Mac mini 的真实终端区域  | 另有设计分析文档，后续由用户实现；没有提供真实连接功能                                                   | 已记录与分析，未实施   |
+配置来源：[WASIDJ/.config](https://github.com/WASIDJ/.config/tree/b5af7423eb7021ffb45cbe4ecec19c0ba76f5c3e)。
 
-## 验证结果
+| 要求          | 当前实现和验证                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| zsh + p10k    | 使用仓库的 ASCII 两行布局；目录和 Git 分支、`-` 填充、`HH:mm:ss` 时间、第二行 `>`；成功/失败提示符对应 ANSI 76/196 |
+| p10k 色值     | 路径 31、anchor 39 且粗体、Git clean 76、gap 238、time 66；浏览器验证实际 RGB 值                                   |
+| Ghostty       | FiraCode Nerd Font Mono、18pt、12px 内边距、Catppuccin Mocha、无窗口装饰；字体本地托管并保留许可                   |
+| tmux          | 独立 session/window、底部只读状态栏、`Ctrl+q`、方向与分屏、确认关闭 window、默认 mouse off、vi 复制模式            |
+| 极简          | 首屏只有身份、目录入口、提示符和底部状态栏；没有 hero、卡片布局、顶部工具栏或 pane 按钮                            |
+| 全键盘        | 页面与 URL picker、窗口/session 操作、复制与配置命令均可由键盘完成；`Ctrl+q m` 可显式开启鼠标                      |
+| Mac mini 区域 | [设计分析](mac-mini-terminal-plan.md) 已记录，用户之后实现；当前不提供真实 PTY/SSH 连接                            |
 
-- 17 个单元测试：内容处理、旧路由映射、tmux session/window 状态、pane 导航与持久化校验、Unicode grapheme 复制。
-- 11 个浏览器测试：仅键盘的 pane/window/session 操作、mouse off/on、URL picker、vi clipboard、命令与主题、文章公式/评论标识/404、字体与响应式、无 JS 阅读、emoji 完整复制与弹层连续切换。
+Ghostty 的 `font-size` 单位为 pt，因此 CSS 使用 18pt，浏览器的计算值为 24px。[Ghostty 官方说明](https://ghostty.org/docs/config/reference#font-size)
+
+## 验证
+
+- 17 个单元测试：内容编译、旧路由、session/window、pane、Unicode grapheme 复制与持久化校验。
+- 15 个浏览器场景：键盘管理、鼠标开关、vi 复制、快捷键列表、命令、字体/响应式、p10k 结构/色值/错误提示、旧主题隔离、文章公式/评论标识、404、无 JS 阅读及弹层切换。
 - 167 条旧站 URL、canonical、JSON-LD、验证文件、RSS、sitemap 和草稿排除检查通过。
-- 暗色首页 Axe 检查通过。没有将旧版 Lighthouse 测量当成本分支性能证明。
-- 草稿截图：[终端首页](preview/terminal-draft.png)。它是当前实现的截图，不是用户指定的参考图。
+- 默认暗色首页 Axe 检查通过。
+- 当前界面：[终端首页](preview/terminal.png)。旧版 Lighthouse 数值不作为本版的性能证明。
 
-## 网页与原终端的边界
-
-这里的 session/window 管理是本地浏览器状态，命令提示符用于浏览博客内容，不是系统 shell。原配置的私人 Codex 周额度脚本没有接入网页；对应组合键展示本地网页状态。真实终端和完整原生 tmux 输出需要后续 Mac mini 网关方案。
-
-在真实终端 pane 中，按键应发送给远端 tmux，而不是再次被外层网页消费。后续设计见 [Mac mini 网页终端分析](mac-mini-terminal-plan.md)。
+网页 session/window 是浏览器本地状态；博客命令用于导航，不执行系统 shell。原配置中的私人 Codex 周额度脚本不在公共站点运行。未来真实终端应使用独立认证来源，并将按键直接交给原有 `mini` 会话。

@@ -2,9 +2,9 @@
 
 基于 Next.js App Router、React 和 TypeScript 的个人工作台。视觉与交互来自 [我的 tmux 配置](https://github.com/WASIDJ/.config/blob/main/tmux/tmux.conf)，保留 Obsidian Markdown → blog-content → GitHub Pages 的写作与发布流程。
 
-![终端改版草稿：等待用户截图对照](docs/preview/terminal-draft.png)
+![极简终端首页](docs/preview/terminal.png)
 
-当前分支按 `.config` 的 Ghostty/tmux 设置实现全键盘版本，仍待用户参考 PNG 与不需要部分的 TIFF 做视觉对照；不是已经完成截图复刻的最终版本。
+界面直接按个人 `.config` 的 zsh、p10k、Ghostty 和 tmux 配置实现：ASCII 两行提示符、目录和 Git 状态、填充横线与时钟，底部 tmux 状态栏，全键盘操作。
 
 ## 开发与预览
 
@@ -30,7 +30,7 @@ macOS 浏览器测试使用已安装的 Google Chrome，Linux CI 使用 Playwrig
 
 ## 工作台操作
 
-默认关闭鼠标，通过 `Ctrl+q m` 开启或关闭 pane 鼠标操作。窗口和 session 分开管理；状态栏只显示文字与 Nerd Font glyph，没有网页工具栏或 pane 按钮。字体使用本地托管的 FiraCode Nerd Font Mono 子集，字号 18px，窗口内边距 12px。
+默认关闭鼠标，通过 `Ctrl+q m` 开启或关闭 pane 鼠标操作。窗口和 session 分开管理；状态栏只显示文字与 Nerd Font glyph，没有网页工具栏或 pane 按钮。字体使用本地托管的 FiraCode Nerd Font Mono 子集，字号 18pt（浏览器计算值 24px），窗口内边距 12px。
 
 | 按键                                  | 操作                                               |
 | ------------------------------------- | -------------------------------------------------- |
@@ -48,6 +48,8 @@ macOS 浏览器测试使用已安装的 Google Chrome，Linux CI 使用 Playwrig
 | 前缀后 `o / w / ?`                    | URL 列表 / window 列表 / 帮助                      |
 | `Alt+v / Alt+s / Alt+z / Alt+=`       | Ghostty 对应的分屏 / 放大 / 等分                   |
 | `/`                                   | 打开页面选择器；选择器里用 `/` 进入筛选输入        |
+
+p10k 按仓库使用 256 色 ANSI 色值、ASCII `>` 成功提示符和红色错误提示符；第一行目录、Git、`-` 填充、`HH:mm:ss` 时间，第二行输入命令。默认 Catppuccin Mocha，终端主题不继承旧版网页主题偏好。
 
 前缀持续等待操作键，`Esc` 取消；单独按下 Ctrl、Alt、Shift 不消耗前缀。当前浏览器版命令只浏览博客：`whoami`、`posts`、`projects`、`about`、`links`、`open <path|number>`、`cat <slug>`、`search <words>`、`theme dark|light`、`font <size>`、`comments`、`clear`。`bind a` 可将前缀改为 Ctrl+A；这不执行系统 shell。
 

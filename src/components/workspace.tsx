@@ -8,6 +8,7 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTmux } from "./tmux-provider";
+import { P10kHeader } from "./p10k-prompt";
 import {
   enterCopyMode,
   moveCopyCursor,
@@ -144,9 +145,11 @@ function ShellInput({
 }: {
   path: string;
   active: boolean;
-  execute: (command: string) => void;
+  execute: (command: string) => void | boolean;
 }) {
   const [command, setCommand] = useState("");
+  const [revision, setRevision] = useState(0);
+  const [failed, setFailed] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (active) input.current?.focus({ preventScroll: true });
@@ -156,16 +159,16 @@ function ShellInput({
       className="terminal-prompt"
       onSubmit={(e) => {
         e.preventDefault();
-        execute(command);
+        setFailed(execute(command) === false);
         setCommand("");
+        setRevision((value) => value + 1);
       }}
     >
-      <div className="shell-directory">
-        <span>{path === "/" ? "~" : `~/blog${path}`}</span>
-        <span className="shell-branch">main</span>
-      </div>
+      <P10kHeader path={path} revision={revision} />
       <label>
-        <span className="shell-chevron">&gt;</span>
+        <span className={`shell-chevron ${failed ? "is-error" : ""}`}>
+          &gt;
+        </span>
         <span className="sr-only">终端命令</span>
         <input
           ref={input}
@@ -263,7 +266,7 @@ export function Workspace({
     if (ready) dispatch({ type: "path", path: normalizePath(pathname) });
   }, [pathname, ready, dispatch]);
   useEffect(() => {
-    const t = read("ryou-theme");
+    const t = read("ryou-terminal-theme");
     if (t === "light") setTheme("light");
     const size = Number(read("ryou-terminal-font"));
     if (size >= 10 && size <= 30) setFontSize(size);
@@ -283,7 +286,7 @@ export function Workspace({
   }, []);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    if (ready) save("ryou-theme", theme);
+    if (ready) save("ryou-terminal-theme", theme);
   }, [theme, ready]);
   useEffect(() => {
     if (ready) save("ryou-terminal-font", String(fontSize));
@@ -534,9 +537,12 @@ export function Workspace({
                 p.path === normalizePath(arg) ||
                 p.path.split("/").filter(Boolean).at(-1) === arg,
             )?.path;
-        if (target) open(target);
-        else setNotice(`cat: no such page: ${arg}`);
-        return;
+        if (target) {
+          open(target);
+          return;
+        }
+        setNotice(`cat: no such page: ${arg}`);
+        return false;
       }
       if (command === "search") {
         open("/page/search/");
@@ -579,6 +585,7 @@ export function Workspace({
         return;
       }
       setNotice(`zsh: command not found: ${command}`);
+      return false;
     },
     [open, catalog, focus, tree, win.path, setPane],
   );
@@ -937,7 +944,10 @@ export function Workspace({
         <ShellInput
           path={win.path}
           active={
-            focus === leaf.id && leaf.content === "shell" && !overlay && !copy
+            focus === leaf.id &&
+            (leaf.content === "shell" || leaf.content === "/") &&
+            !overlay &&
+            !copy
           }
           execute={execute}
         />
@@ -1036,7 +1046,7 @@ export function Workspace({
       data-ready={ready ? "true" : "false"}
       data-mouse={state.mouse ? "on" : "off"}
       data-copy={copy ? "on" : "off"}
-      style={{ fontSize: `${fontSize}px` }}
+      style={{ fontSize: `${fontSize}pt` }}
       onClickCapture={(e) => {
         if (
           !state.mouse &&

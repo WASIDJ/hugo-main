@@ -1,4 +1,4 @@
-/* Repository-derived provisional terminal skin. Screenshot comparison is pending. */
+/* Minimal zsh/p10k + tmux skin, derived from the owner's repository configuration. */
 @font-face {
   font-family: "Terminal Mono";
   src: url("/fonts/FiraCodeNerdFontMono.woff2") format("woff2");
@@ -732,4 +732,50 @@ body {
     width: calc(100vw - 24px);
     font-size: 14px;
   }
+}
+
+/* p10k uses 256-color indices, independently of tmux's Catppuccin modules. */
+.p10k-first-line {
+  display: flex;
+  align-items: baseline;
+  gap: 1ch;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  margin: 0 0 0.1em;
+}
+.p10k-directory {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.p10k-parent {
+  color: #0087af;
+}
+.p10k-anchor {
+  color: #00afff;
+  font-weight: 700 !important;
+}
+.p10k-git,
+.terminal-native .shell-chevron {
+  color: #5fd700;
+}
+.p10k-gap {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: pre;
+  color: #444444;
+}
+.p10k-time {
+  color: #5f8787;
+  flex-shrink: 0;
+}
+.terminal-native .terminal-usage {
+  color: var(--muted);
+}
+
+.terminal-native .shell-chevron.is-error {
+  color: #ff0000;
 }

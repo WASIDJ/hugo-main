@@ -158,7 +158,10 @@ test("terminal commands, theme and persistence stay keyboard operated", async ({
   await command(page, "theme light");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await command(page, "font 16");
-  await expect(page.locator(".terminal-shell")).toHaveCSS("font-size", "16px");
+  await expect(page.locator(".terminal-shell")).toHaveCSS(
+    "font-size",
+    "21.3333px",
+  );
   await command(page, "projects");
   await expect(page).toHaveURL(/projects/);
   await page.reload();
@@ -210,7 +213,7 @@ test("responsive terminal uses repository font, padding and plain shell chrome",
     await expect(page.locator(".terminal-shell")).toHaveCSS("padding", "12px");
     await expect(page.locator(".terminal-shell")).toHaveCSS(
       "font-size",
-      "18px",
+      "24px",
     );
     await expect(page.locator(".terminal-shell")).toHaveCSS(
       "font-family",
@@ -277,4 +280,86 @@ test("closing a popup cannot dismiss a subsequently opened session picker", asyn
     ).toBeVisible();
     await page.keyboard.press("Escape");
   }
+});
+
+test("p10k matches the configured ASCII two-line prompt and ANSI colors", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator(".terminal-shell")).toHaveAttribute(
+    "data-ready",
+    "true",
+  );
+  const prompt = page.locator(".terminal-prompt");
+  await expect(prompt.locator(".p10k-directory")).toHaveText("~/blog");
+  await expect(prompt.locator(".p10k-git")).toHaveText("main");
+  await expect(prompt.locator(".p10k-gap")).toContainText("---");
+  await expect(prompt.locator(".p10k-time")).toHaveText(/^\d{2}:\d{2}:\d{2}$/);
+  await expect(prompt.locator(".shell-chevron")).toHaveText(">");
+  await expect(prompt.locator(".p10k-anchor")).toHaveCSS(
+    "color",
+    "rgb(0, 175, 255)",
+  );
+  await expect(prompt.locator(".shell-chevron")).toHaveCSS(
+    "color",
+    "rgb(95, 215, 0)",
+  );
+  await expect(
+    page.locator(
+      ".shell-header,.pane-header,.pane-controls,.hero-actions,.statusbar",
+    ),
+  ).toHaveCount(0);
+});
+
+test("p10k shows the configured error prompt after an unknown command", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator(".terminal-shell")).toHaveAttribute(
+    "data-ready",
+    "true",
+  );
+  await command(page, "does-not-exist");
+  await expect(page.locator(".terminal-prompt .shell-chevron")).toHaveCSS(
+    "color",
+    "rgb(255, 0, 0)",
+  );
+  await command(page, "pwd");
+  await expect(page.locator(".terminal-prompt .shell-chevron")).toHaveCSS(
+    "color",
+    "rgb(95, 215, 0)",
+  );
+});
+
+test("the terminal defaults to personal Mocha without inheriting the old website theme", async ({
+  page,
+}) => {
+  await page.addInitScript(() => localStorage.setItem("ryou-theme", "light"));
+  await page.goto("/");
+  await expect(page.locator(".terminal-shell")).toHaveAttribute(
+    "data-ready",
+    "true",
+  );
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await command(page, "theme light");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+});
+
+test("opening the home terminal focuses the zsh input for immediate keyboard use", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator(".terminal-shell")).toHaveAttribute(
+    "data-ready",
+    "true",
+  );
+  await expect(
+    page.locator('.pane.is-focused input[aria-label="终端命令"]'),
+  ).toBeFocused();
+  await page.keyboard.type("projects");
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "项目与工程实践" }),
+  ).toBeVisible();
 });
