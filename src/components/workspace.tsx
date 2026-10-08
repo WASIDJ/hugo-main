@@ -670,7 +670,7 @@ export function Workspace({
           )
       : [];
   return (
-    <div className="terminal-shell">
+    <div className="terminal-shell" data-ready={restored ? "true" : "false"}>
       <a className="skip-link" href="#workspace">
         跳到内容
       </a>

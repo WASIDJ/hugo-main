@@ -2,6 +2,10 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import fs from "node:fs/promises";
 const key = async (page: any, value: string) => {
+  await expect(page.locator(".terminal-shell")).toHaveAttribute(
+    "data-ready",
+    "true",
+  );
   await page.keyboard.press("Control+q");
   await page.keyboard.press(value);
 };
