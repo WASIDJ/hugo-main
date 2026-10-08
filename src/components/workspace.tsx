@@ -260,6 +260,7 @@ export function Workspace({
     dialog = useRef<HTMLDialogElement>(null),
     promptInput = useRef<HTMLInputElement>(null),
     copyPre = useRef<HTMLPreElement>(null),
+    windowNav = useRef<HTMLElement>(null),
     serial = useRef(0),
     interaction = useRef<"keyboard" | "pointer">("keyboard");
   useEffect(() => {
@@ -914,6 +915,23 @@ export function Workspace({
       .querySelector(".copy-cursor")
       ?.scrollIntoView({ block: "nearest" });
   }, [copy?.cursor]);
+  useEffect(() => {
+    const nav = windowNav.current;
+    if (!nav) return;
+    const keepCurrentVisible = () => {
+      const current = nav.querySelector<HTMLElement>(".current");
+      if (!current) return;
+      const outer = nav.getBoundingClientRect(),
+        inner = current.getBoundingClientRect();
+      if (inner.left < outer.left) nav.scrollLeft += inner.left - outer.left;
+      else if (inner.right > outer.right)
+        nav.scrollLeft += inner.right - outer.right;
+    };
+    keepCurrentVisible();
+    const observer = new ResizeObserver(keepCurrentVisible);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [win.id, session.windows.length, fontSize]);
   const renderLeaf = (leaf: Leaf) => (
     <section
       key={leaf.id}
@@ -1073,7 +1091,7 @@ export function Workspace({
           <span className="segment-text">{session.name}</span>
           <span className="power-cap end-cap"></span>
         </span>
-        <nav className="tmux-windows" aria-label="tmux windows">
+        <nav ref={windowNav} className="tmux-windows" aria-label="tmux windows">
           {session.windows.map((w, i) => (
             <span
               key={w.id}

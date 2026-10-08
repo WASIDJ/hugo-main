@@ -363,3 +363,26 @@ test("opening the home terminal focuses the zsh input for immediate keyboard use
     page.getByRole("heading", { name: "项目与工程实践" }),
   ).toBeVisible();
 });
+
+test("keyboard-selected windows stay visible in the narrow tmux status bar", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto("/");
+  await key(page, "5");
+  await expect(page.locator(".tmux-windows .current")).toContainText("links");
+  await expect
+    .poll(() =>
+      page.locator(".tmux-windows").evaluate((nav) => {
+        const current = nav.querySelector(".current")!;
+        const outer = nav.getBoundingClientRect(),
+          inner = current.getBoundingClientRect();
+        return inner.left >= outer.left - 1 && inner.right <= outer.right + 1;
+      }),
+    )
+    .toBe(true);
+  await key(page, "1");
+  await expect
+    .poll(() => page.locator(".tmux-windows").evaluate((nav) => nav.scrollLeft))
+    .toBe(0);
+});
