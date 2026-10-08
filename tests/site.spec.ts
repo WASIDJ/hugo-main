@@ -386,3 +386,28 @@ test("keyboard-selected windows stay visible in the narrow tmux status bar", asy
     .poll(() => page.locator(".tmux-windows").evaluate((nav) => nav.scrollLeft))
     .toBe(0);
 });
+
+test("ssh mini-t opens the configured private origin from a keyboard command", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/");
+  await expect(page.locator(".terminal-shell")).toHaveAttribute(
+    "data-ready",
+    "true",
+  );
+  await command(page, "ssh config https://mini.example.ts.net:8443");
+  await expect(page.locator(".terminal-shell")).toContainText(
+    "private origin saved",
+  );
+  await context.route("https://mini.example.ts.net:8443/**", (route) =>
+    route.fulfill({ body: "private SSH" }),
+  );
+  const popup = page.waitForEvent("popup");
+  await command(page, "ssh mini-t");
+  const privatePage = await popup;
+  await privatePage.waitForLoadState();
+  expect(privatePage.url()).toBe("https://mini.example.ts.net:8443/");
+  expect(await privatePage.evaluate(() => window.opener === null)).toBe(true);
+  await privatePage.close();
+});

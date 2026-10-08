@@ -1,7 +1,7 @@
 {
   "name": "ryou-workspace",
   "version": "1.0.0",
-  "description": "Ryou personal workspace · Next.js + tmux",
+  "description": "Ryou personal workspace \u00b7 Next.js + tmux",
   "scripts": {
     "content": "node scripts/prepare.mjs",
     "dev": "npm run content && next dev",
@@ -10,7 +10,10 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
-    "check": "npm run test && npm run build && npm run typecheck"
+    "check": "npm run test && npm run build && npm run typecheck",
+    "ssh:build": "node ssh-portal/scripts/build.mjs",
+    "ssh:test": "go -C ssh-portal/gateway test -race ./...",
+    "ssh:deploy": "node ssh-portal/scripts/deploy.mjs"
   },
   "repository": {
     "type": "git",

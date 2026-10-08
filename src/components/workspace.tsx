@@ -47,6 +47,7 @@ import {
 } from "./views";
 import { Article } from "./article";
 import { Search } from "./search";
+import { sshPortalOrigin, sshPortalStorageKey } from "@/lib/ssh-portal";
 
 type PickerRow = {
   id: string;
@@ -224,6 +225,7 @@ COMMANDS
   whoami · ls · posts · projects · about · links
   open <path|number> · cat <slug> · search <words>
   theme dark|light · font <size> · comments · clear
+  ssh mini-t · ssh config <private-https-origin>
 
 Esc / q closes this overlay.`;
 export function Workspace({
@@ -513,6 +515,46 @@ export function Workspace({
       if (command === "help") {
         setOverlay({ type: "help" });
         return;
+      }
+      if (command === "ssh") {
+        const launch = (value: string) => {
+          const origin = sshPortalOrigin(value);
+          if (!origin) {
+            setNotice(
+              "ssh: expected a private HTTPS origin without credentials or URL parameters",
+            );
+            return false;
+          }
+          save(sshPortalStorageKey, origin);
+          window.open(origin, "_blank", "noopener,noreferrer");
+          setNotice("ssh mini-t: opened private WASM client");
+          return true;
+        };
+        if (rest[0] === "config" && rest[1]) {
+          const origin = sshPortalOrigin(rest.slice(1).join(" "));
+          if (!origin) {
+            setNotice("ssh: invalid HTTPS origin");
+            return false;
+          }
+          save(sshPortalStorageKey, origin);
+          setNotice(
+            "ssh: private origin saved in this browser; run ssh mini-t",
+          );
+          return;
+        }
+        if (arg === "mini-t") {
+          const origin = read(sshPortalStorageKey);
+          if (origin) return launch(origin);
+          setOverlay({
+            type: "prompt",
+            title: "ssh mini-t · private HTTPS origin",
+            initial: "",
+            submit: launch,
+          });
+          return;
+        }
+        setNotice("usage: ssh mini-t | ssh config <private-https-origin>");
+        return false;
       }
       if (["whoami", "home"].includes(command)) {
         open("/");
